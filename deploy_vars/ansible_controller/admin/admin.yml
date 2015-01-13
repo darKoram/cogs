@@ -1,0 +1,5 @@
+---
+
+# deploy_vars/ansible_controller/admin.yml
+
+kibana_password: kibana_kung_fu

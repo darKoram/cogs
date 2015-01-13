@@ -1,0 +1,127 @@
+---
+
+# openstack/files/requested_hosts/e3standard1.yml
+
+
+# Requires pivot_floating_ip and torch_floating_ip to be defined (in <tenant.name>.yml)
+
+# disk_size in Gb is the local disk taken from the compute host's first two raid drives.
+
+#TODO validate that hostname fields are valid hostnames (no underscores etc)
+
+log_mount_device: vdb
+log_mount_point: /mnt/log
+data_mount_device: vdc
+data_mount_point: /mnt/data
+# Over-ride the standard flavor settings in group_vars/staging/staging.yml
+# Totals: 6 cores, 12 Gb ram, 120 Gb Disk
+
+
+pivot_flavor:
+  name: 1c_2m_20d
+  id: 1bc0c9c8-e3a8-4ae1-9e0f-d0d251a1e5eb
+ansible_flavor:
+  name: 1c_2m_20d
+  id: 1bc0c9c8-e3a8-4ae1-9e0f-d0d251a1e5eb
+torch_flavor:
+  name: 1c_2m_20d
+  id: 1bc0c9c8-e3a8-4ae1-9e0f-d0d251a1e5eb
+elasticsearch_flavor:
+  name: 1c_2m_20d
+  id: 1bc0c9c8-e3a8-4ae1-9e0f-d0d251a1e5eb
+
+requested_hosts:
+ - short_hostname: lynx01
+   hostname: "{{tenant.name}}-lynx01"
+   roles: torch
+   flavor_id: "{{torch_flavor.id}}"
+   floating_ip: "{{torch_floating_ip}}"
+   image_id: "{{torch_image.id}}"
+   availability_zone: "" 
+   security_groups: default
+   attached_volumes: 
+     - mount_point: "{{log_mount_point}}"
+       device_name: "{{log_mount_device}}"
+       name: "lynx01_{{log_mount_device}}"
+       size: 2
+     - mount_point: "{{data_mount_point}}"
+       device_name: "{{data_mount_device}}"
+       name: "lynx01_{{data_mount_device}}"
+       size: 4
+ - short_hostname: elastic01
+   hostname: "{{tenant.name}}-elastic01"
+   roles: elasticsearch_master,elasticsearch_data
+   flavor_id: "{{elasticsearch_flavor.id}}" 
+   floating_ip: ""
+   image_id: "{{elasticsearch_image.id}}"
+   availability_zone: "{{availability_zones.0}}"
+   security_groups: default
+   attached_volumes: 
+     - mount_point: "{{log_mount_point}}"
+       device_name: "{{log_mount_device}}"
+       name: "elastic01_{{log_mount_device}}"
+       size: 2
+     - mount_point: "{{data_mount_point}}"
+       device_name: "{{data_mount_device}}"
+       name: "elastic01_{{data_mount_device}}"
+       size: 4 
+ - short_hostname: elastic02
+   hostname: "{{tenant.name}}-elastic02"
+   roles: elasticsearch_master,elasticsearch_data
+   flavor_id: "{{elasticsearch_flavor.id}}" 
+   floating_ip: ""
+   image_id: "{{elasticsearch_image.id}}"
+   availability_zone: "{{availability_zones.1}}"
+   security_groups: default
+   attached_volumes: 
+     - mount_point: "{{log_mount_point}}"
+       device_name: "{{log_mount_device}}"
+       name: "elastic02_{{log_mount_device}}"
+       size: 2
+     - mount_point: "{{data_mount_point}}"
+       device_name: "{{data_mount_device}}"
+       name: "elastic02_{{data_mount_device}}"
+       size: 4
+ - short_hostname: elastic03
+   hostname: "{{tenant.name}}-elastic03"
+   roles: elasticsearch_master,elasticsearch_data
+   flavor_id: "{{elasticsearch_flavor.id}}" 
+   floating_ip: ""
+   image_id: "{{elasticsearch_image.id}}"
+   availability_zone: "{{availability_zones.2}}"
+   security_groups: default
+   attached_volumes: 
+     - mount_point: "{{log_mount_point}}"
+       device_name: "{{log_mount_device}}"
+       name: "elastic03_{{log_mount_device}}"
+       size: 2
+     - mount_point: "{{data_mount_point}}"
+       device_name: "{{data_mount_device}}"
+       name: "elastic03_{{data_mount_device}}"
+       size: 4
+ - short_hostname: pivot
+   hostname: "{{tenant.name}}-pivot"
+   roles: pivot                                  
+   flavor_id: "{{pivot_flavor.id}}"
+   floating_ip: "{{pivot_floating_ip}}"
+   image_id: "{{pivot_image.id}}"
+   availability_zone: ""
+   security_groups: default
+   attached_volumes: []
+ # - short_hostname: ansible
+ #   hostname: "{{tenant.name}}-ansible"
+ #   roles: ansible_controller,lynx3_data_source
+ #   flavor_id: "{{ansible_flavor.id}}"
+ #   floating_ip: "yes"
+ #   image_id: "{{ansible_image.id}}"
+ #   availability_zone: "" 
+ #   security_groups: default
+ #   attached_volumes: 
+ #     - mount_point: "{{data_mount_point}}"  
+ #       device_name: "{{log_mount_device}}"
+ #       name: "ansible_{{log_mount_device}}"
+ #       size: 2
+ #     - mount_point: "{{data_mount_point}}" 
+ #       device_name: "{{data_mount_device}}"
+ #       name: "ansible_{{data_mount_device}}"
+ #       size: 4

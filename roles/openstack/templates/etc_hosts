@@ -1,0 +1,9 @@
+# {{tenant.name}} etc_hosts
+127.0.0.1 localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+{% for host in register_vms.results %}
+{% if host.private_ip %}
+{{host.private_ip + ' ' + host.info.name + ' ' + host.info.name+dns.fqdn_suffix}} {{host.info.name | replace(tenant.name + '-','')}}
+{% endif %}
+{% endfor %}

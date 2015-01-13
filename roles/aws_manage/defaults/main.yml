@@ -1,0 +1,8 @@
+---
+# defaults file for aws_manage
+
+aws_pip_packages: 
+  - boto
+
+aws_apt_packages:
+  - awscli

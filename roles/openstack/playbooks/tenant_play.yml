@@ -1,0 +1,62 @@
+---
+
+# openstack/playbooks/tenant_play.yml
+
+ - hosts: all
+   gather_facts: yes
+
+ - hosts: openstack_controller_leader
+
+   vars_files:
+     - ../vars/main.yml
+     - ["../../../vars/{{ansible_os_family}}.yml"]
+   sudo: yes
+   vars:
+     usage: >
+        [21ct-ansible] $ ansible-playbook -i hosts roles/openstack/playbooks/tenant_play.yml 
+                                          -e "delete_tenant=yes"
+
+        You can only run this if you have the vault key to deploy_vars admin file
+        Include the -e "delete_tenant=yes" to delete the project
+        Place localhost in the groups desired in deploy_vars
+        eg. hosts file to create project-dev2 tenant
+        [admin:children]
+        datacenter
+        [datacenter:children]
+        staging
+        [staging:children]
+        project-dev2
+        [project-dev2]
+        localhost
+        [openstack_controller_leader]
+        node-8
+
+   tasks:
+
+    - fail: msg="RUNNING tenant_play.yml against localhost is not yet supported"
+      when: inventory_hostname == 'localhost'
+
+    - name: Set endpoints when calls to horizon are initiated inside datacenter
+      set_fact: 
+        os_service_endpoint: "{{os_service_endpoint_address}}"
+        os_auth_url: "{{os_auth_url_address}}"
+      when: inventory_hostname != 'localhost'
+
+    - name: Set endpoints when calls to horizon are initiated outside datacenter
+      set_fact: 
+        os_service_endpoint: "{{os_service_endpoint_name}}"
+        os_auth_url: "{{os_auth_url_name}}"
+      when: inventory_hostname == 'localhost'
+
+    - debug: msg="endpoints are {{os_service_endpoint}} and {{os_auth_url}}"
+
+    - debug: msg="{{usage | pprint}}"
+
+    - include_vars: "../files/requested_hosts/{{requested_hosts_file}}"
+
+    - include: ../tasks/tenant.yml 
+      when: delete_tenant is not defined
+
+    - include: ../tasks/tenant_delete.yml
+      when: delete_tenant is defined and ( delete_tenant == "yes")
+      

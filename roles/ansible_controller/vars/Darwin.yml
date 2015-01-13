@@ -1,0 +1,9 @@
+---
+
+# ansible_controller/vars/Darwin.yml
+
+###############################################
+# Sublime 
+###############################################
+ansible_controller_sublime2_packages_path: "{{HOME}}/Library/Application Support/Sublime Text 2/Packages"
+ansible_controller_sublime_packages_path: ansible_controller_sublime2_packages_path

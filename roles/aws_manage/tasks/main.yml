@@ -1,0 +1,49 @@
+---
+# tasks file for aws_manage
+
+- name: Install apt dependencies
+  apt: pkg="{{item}}"
+  with_items: aws_apt_packages
+  sudo: yes
+
+- name: Install pip dependencies
+  pip: >
+    name="{{item}}"
+    executable="{{pip_executable}}"
+  with_items: aws_pip_packages
+  sudo: yes
+
+- name: Ensure pki certs directory exists
+  file: state=directory name="{{aws_ssl_dir}}"
+  sudo: yes
+
+- name: Create key and cert pair for aws cli
+  shell: >
+        openssl req -x509 -batch -nodes -days 3650 -newkey rsa:2048 
+        -keyout "{{aws_ssl_dir}}/{{aws_ssl_key_file}}" 
+        -out "{{aws_ssl_dir}}/{{aws_ssl_certificate_file}}"
+        creates="{{aws_ssl_dir}}/{{aws_ssl_certificate_file}}"
+  sudo: yes
+ # admin/aws/<path-to-project>/creds.yml contains paths to secure vars
+ # in a protected user space.  This could be vault encrypted for 
+ # extra security.  The checked-in file should be an example
+ # with non-functioning values.  
+
+# WIP
+#- include: users.yml
+
+- include: vpc.yml
+  tags: 
+    - aws_vpc
+
+- include: route53.yml
+  tags:
+    - aws_route53
+
+- include: cloud_formation.yml
+  tags: 
+    - aws_cloud_formation
+
+- include: create_vms.yml
+  tags:
+    - aws_create_vms

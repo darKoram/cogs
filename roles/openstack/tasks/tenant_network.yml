@@ -1,0 +1,189 @@
+# tenant_network.yml
+
+ - name: Create a network for the tenant
+   quantum_network: state=present 
+                    auth_url="{{ os_service_endpoint }}"
+                    login_username={{ admin_tenant_user }}
+                    login_password={{ admin_pass }}
+                    login_tenant_name={{ admin_tenant }}
+                    provider_network_type="{{provider_network.network_type}}"
+                    provider_physical_network="{{ provider_network.physical_network }}"
+                    provider_segmentation_id={{ tenant.network.provider_network.segmentation_id }} 
+                    tenant_name="{{ tenant.name }}"
+                    name="{{ tenant.network.name }}"
+   when: use_commandline is not defined
+
+# login_username={{ admin_tenant_user }} 
+# login_password={{ admin_pass }}
+# login_tenant_name={{ admin_tenant }}
+
+ - name: Register if the network exists for the tenant
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              net-list | grep {{tenant.network.name}} | cut -d" " -f2
+   register: register_networks
+
+ - include_vars: "../files/tenant_profiles/{{tenant_quotas_profile}}"
+
+ - debug: msg="{{register_networks}}"
+
+ - name: Get the network segmentation_id 
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+            net-show "{{register_networks.stdout}}" | grep 'segmentation_id' | cut -d' ' -f5
+   register: register_segmentation_id
+
+ - name: Create a network for the tenant
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+               --os-tenant-name="{{ admin_tenant }}"
+               --os-auth-url="{{ os_auth_url }}"
+               --os-password="{{ admin_pass }}"
+               net-create 
+                  "{{tenant.network.name}}"
+                  --tenant-id "{{tenant_id}}"
+                  --column "provider:segmentation_id"
+   when: register_networks.stdout == ''
+
+
+ - name: debugsubnet 
+   debug: msg="subnetp"
+
+ - name: Set endpoints when calls to horizon are initiated inside datacenter
+   set_fact: 
+     os_service_endpoint: "{{os_service_endpoint_address}}"
+     os_auth_url: "{{os_auth_url_address}}"
+   when: inventory_hostname != 'localhost'
+
+ - name: Set endpoints when calls to horizon are initiated outside datacenter
+   set_fact: 
+     os_service_endpoint: "{{os_service_endpoint_name}}"
+     os_auth_url: "{{os_auth_url_name}}"
+   when: inventory_hostname == 'localhost'
+
+ #TODO test for network name in nova network-list for tenant
+ - name: Create a subnet for the network
+   quantum_subnet: state=present 
+                   auth_url={{ os_auth_url }}
+                   login_username={{ tenant_name }}_admin
+                   login_password={{ tenant.name }}
+                   login_tenant_name={{ tenant.name }}
+                   tenant_name={{ tenant.name }}
+                   network_name={{ tenant.network.name }}
+                   name={{ tenant.subnet.name }}
+                   cidr={{ tenant.subnet.cidr }}
+                   region_name={{ openstack.region }}
+
+
+ - name: Register if the subnet exists for the tenant
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              subnet-list | grep {{tenant.subnet.name}} | cut -d" " -f2
+   register: register_subnets
+
+
+ - debug: msg="{{register_subnets}}"
+
+ - name: Create a subnet for the tenant
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+               --os-tenant-name="{{ admin_tenant }}"
+               --os-auth-url="{{ os_auth_url }}"
+               --os-password="{{ admin_pass }}"
+            subnet-create "{{tenant.network.name}}" "{{tenant.subnet.cidr}}"
+                  --gateway "{{tenant.router.internal_interface}}"
+                  --dns-nameserver "{{dns.name_servers[0]}}"
+                  --dns-nameserver "{{dns.name_servers[1]}}"
+                  --name "{{tenant.subnet.name}}"
+                  --tenant-id "{{tenant_id}}"
+   when: register_subnets.stdout == ''
+
+ - debug: msg="{{tenant.router.name}}  {{tenant.subnet.name}}"
+
+ - name: Create a router
+   quantum_router: state=present 
+                   auth_url={{ os_auth_url }}  
+                   login_username={{ tenant_name }}_admin
+                   login_password={{ tenant.name }} 
+                   login_tenant_name={{ tenant.name }}
+                   tenant_name={{ tenant.name }}
+                   name={{ tenant.router.name }}
+                      
+ - name: Add the network interface to the router
+   quantum_router_interface: state=present 
+                             auth_url={{ os_auth_url }}  
+                             login_username={{ tenant_name }}_admin
+                             login_password={{ tenant.name }} 
+                             login_tenant_name={{ tenant.name }}
+                             tenant_name={{ tenant.name }}
+                             router_name={{ tenant.router.name }}
+                             subnet_name={{ tenant.subnet.name }}
+
+ - name: Add the gateway to the router
+   quantum_router_gateway: state=present 
+                           auth_url={{ os_auth_url }}  
+                           login_username={{ tenant_name }}_admin
+                           login_password={{ tenant.name }} 
+                           login_tenant_name={{ tenant.name }}
+                           router_name={{ tenant.router.name }}
+                           network_name={{ external_network }}
+                           region_name={{ openstack.region }}
+
+# If the ansible router modules failed.  Move to tenant_network_cli.yml
+ - name: Register if the router exists for the tenant
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              router-list --column name --column id --format json
+   register: register_routers
+
+ - name: Create a router for the tenant
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              router-create "{{tenant.router.name}}" 
+                --tenant-id "{{tenant_id}}"
+   when: "register_routers.stdout.find( '{{tenant.router.name}}' ) == -1"
+
+# TODO the above will fail for adding lynx-dev when lynx-dev2 exists.
+# should use json and do an exact name match.
+
+# TODO The ansible module is now working and preferred
+# Move this to tenant_network_cli.yml
+ # - name: Register if the private network (subnet) exists on the router
+ #   shell: quantum --os-username="{{ admin_tenant_user }}" 
+ #                  --os-tenant-name="{{ admin_tenant }}"
+ #                  --os-auth-url="{{ os_auth_url }}"
+ #                  --os-password="{{ admin_pass }}"
+ #              router-port-list "{{tenant.router.name}}" 
+ #                      --column fixed_ips --column id --format json
+ #   register: register_router_subnets
+
+ # - name: Add the private network interface to the router
+ #   shell: quantum --os-username="{{ admin_tenant_user }}" 
+ #                  --os-tenant-name="{{ admin_tenant }}"
+ #                  --os-auth-url="{{ os_auth_url }}"
+ #                  --os-password="{{ admin_pass }}"
+ #              router-interface-add "{{tenant.router.name}}" "{{tenant.subnet.name}}"
+ #   when: "register_router_subnets.stdout.find( '{{tenant.router.internal_interface}}' ) == -1"
+
+
+ # - name: Clear the router gateway to allow idempotency (no list command exists)
+ #   shell: quantum --os-username="{{ admin_tenant_user }}" 
+ #                  --os-tenant-name="{{ admin_tenant }}"
+ #                  --os-auth-url="{{ os_auth_url }}"
+ #                  --os-password="{{ admin_pass }}"
+ #              router-gateway-clear "{{tenant.router.name}}" 
+
+ # - name: Set the router gateway
+ #   shell: quantum --os-username="{{ admin_tenant_user }}" 
+ #                  --os-tenant-name="{{ admin_tenant }}"
+ #                  --os-auth-url="{{ os_auth_url }}"
+ #                  --os-password="{{ admin_pass }}"
+ #              router-gateway-set "{{tenant.router.name}}" "{{external_network}}"

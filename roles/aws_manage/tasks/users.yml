@@ -1,0 +1,86 @@
+---
+
+# aws_manage/tasks/users.yml
+
+# This file uses aws cli.
+# It would be best to use boto or even better, write
+# an ansible module to get idempotency and standard
+# dict to stdout on task completion.
+
+# Requires:
+# The client code that calls users.yml must
+# have loaded a dict (perhaps using include_vars)
+# with the following structure
+
+# grouped_users:
+# 	group:
+#                 name: "somthing"
+# 		users:
+#                   - user1
+#    		  - user2
+# 	group:
+#                name: "other"
+#                 users:
+#  		  - user2
+# 		  - user3
+#  
+
+# Create the aws groups for the project.
+# Vars in deploy_vars/aws/<path-to-project>/admin.yml will
+# be automatically loaded by deploy_vars.py
+
+# TODO This should be a module to make it idempotent
+# but groups/users/role management is pre-PR in
+# ansible dev repo.  
+
+- name: Create aws project users
+  local_action: shell "aws iam create-user --user-name {{item.1}}"
+  with_subelements: 
+    - grouped_users
+    - users
+
+# - name: Create aws user profile
+#   local_action:>
+#  shell aws iam create-login-profile
+#   with_items: users
+
+- name: Create aws groups
+  local_action:  >
+              shell aws iam create-group 
+                 --group-name "{{item.1}}"
+  with_subelements: 
+    - grouped_users
+    - name
+
+# - name: Create aws access key for user
+#   local_action: >
+#          shell aws iam create-access-key --user-name "{{item.1}}"
+#   with_items: 
+#     - grouped_users
+#     - users
+# Prefer using ansible modules when available for idempotency as below
+- debug: msg="{{aws_admin_key_name}}"
+
+- name: Load the aws admin key
+  ec2_key:
+    name: "{{aws_admin_key_name}}"
+    key_material: "{{ item }}"
+    region: "{{aws_default_region}}"
+    validate_certs: no
+  with_file: "{{aws_admin_public_ssh_key}}"
+  tags:
+    - aws_admin_keys
+
+# - name: State aws  policy for user
+#   local_action:>
+#          shell aws iam put-user-policy
+#   with_items: users
+
+- name: Add aws user to groups
+  local_action: >
+      shell aws iam add-user-to-group 
+                 --user-name "{{item.0.name}}"
+                 --group-name "{{item.1}}"
+  with_subelements: 
+    - grouped_users
+    - users

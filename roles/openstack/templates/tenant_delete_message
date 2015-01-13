@@ -1,0 +1,16 @@
+# Ansible generated tenant_delete_message   
+
+The project {{tenant.name}} has been deleted.
+                  
+ It would be wise to clean out your .ssh/known_hosts file of all references to 
+ {{tenant.name}}
+
+ Try grep {{tenant.name}} ~/.ssh/known_hosts
+ Then
+ grep -Rl {{tenant.name}} ~/.ssh/known_hosts | xargs sed -i "" "s|{{tenant.name}}|d|" 
+
+ 21ct-ansible/{{deploy_vars_relpath}}/{{tenant_name}}/{{tenant_name}}.yml
+
+The admin may now wish to delete the {{deploy_vars_relpath}} directory and push the
+change to git stash.
+

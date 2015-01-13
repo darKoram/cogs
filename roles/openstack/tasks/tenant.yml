@@ -1,0 +1,155 @@
+---
+# /openstack/tasks/tenant.yml
+
+# Creates tenant user and role
+# Gets called against an openstack_controller
+
+
+ - include_vars: "../files/tenant_profiles/{{tenant_quotas_profile}}"
+
+
+ #token={{ keystone_admin_token }}
+
+ # - name: Create Tenant
+ #   keystone_user: tenant={{ tenant.name }}
+ #                  tenant_description={{tenant_description}} endpoint={{ os_service_endpoint }}
+ #                  login_password="{{ admin_pass }}" 
+ #                  login_tenant_name="{{admin_tenant}}" 
+ #                  login_username="{{ admin_tenant_user}}"
+ #   register: register_tenant
+
+ # - name: Get tenants
+ #   uri: url="{{ os_service_endpoint }}/tenants"
+ #        method=GET
+ #        timeout=30
+ #        status_code=200
+ #        return_content=yes
+ #        HEADER_User-Agent=python-keystoneclient
+ #        HEADER_X-Auth-Token="{{keystone_admin_token}}"
+ #        HEADER_Content-Type="application/json"
+ #   register: register_tenants
+
+ # - name: See if tenant exists
+ #   uri: body="name=lynx-dev2"
+ #        url="{{ os_service_endpoint }}/tenants"
+ #        method=POST
+ #        timeout=30
+ #        return_content=yes
+ #        HEADER_User-Agent=python-keystoneclient
+ #        HEADER_X-Auth-Token="{{keystone_admin_token}}"
+ #        HEADER_Content-Type="application/json"
+ #   register: register_tenant
+ #   ignore_errors: yes
+
+
+ - include: ../tasks/tenant_get_id.yml
+
+ - name: Set the quotas for the tenant
+   shell: nova --os-username="{{ admin_tenant_user }}" 
+                               --os-tenant-name="{{ admin_tenant }}"
+                               --os-auth-url="{{ os_auth_url }}"
+                               --os-password="{{ admin_pass }}"
+                            quota-update 
+                            --instances "{{tenant_settings.quotas.instances}}"
+                            --cores "{{tenant_settings.quotas.cores}}"
+                            --ram "{{tenant_settings.quotas.ram}}"
+                            --floating-ips "{{tenant_settings.quotas.floating_ips}}"
+                            --fixed-ips "{{tenant_settings.quotas.fixed_ips}}"
+                            --metadata-items "{{tenant_settings.quotas.metadata_items}}"
+                            --injected-files "{{tenant_settings.quotas.injected_files}}"
+                            --injected-file-content-bytes "{{tenant_settings.quotas.injected_file_content_bytes}}"
+                            --injected-file-path-bytes "{{tenant_settings.quotas.injected_file_path_bytes}}"
+                            --key-pairs "{{tenant_settings.quotas.key_pairs}}"
+                            --security-groups "{{tenant_settings.quotas.security_groups}}"
+                            --security-group-rules "{{tenant_settings.quotas.security_group_rules}}"
+                            "{{tenant_id}}"
+
+ - name: Set the cinder quotas for the tenant
+   shell: cinder --os-username="{{ admin_tenant_user }}" 
+                               --os-tenant-name="{{ admin_tenant }}"
+                               --os-auth-url="{{ os_auth_url }}"
+                               --os-password="{{ admin_pass }}"
+                            quota-update 
+                            --gigabytes "{{tenant_settings.quotas.gigabytes}}"
+                            --volumes "{{tenant_settings.quotas.volumes}}"
+                            --snapshots "{{tenant_settings.quotas.snapshots}}"
+                            "{{tenant_id}}"
+
+ # - name: Create the user for tenant
+ #   keystone_user: endpoint={{ os_service_endpoint }} 
+ #                  token={{keystone_admin_token}}
+ #                  user={{ item.name }} 
+ #                  tenant={{ tenant.name }}
+ #                  password={{ item.password }} 
+ #   with_items: tenant_users
+
+ - name: Create the user for tenant
+   keystone_user: login_username={{ admin_tenant_user }} 
+                  login_password={{ admin_pass }}
+                  login_tenant_name={{ admin_tenant }} 
+                  endpoint={{ os_auth_url }}
+                  user={{ item.0.name }} 
+                  tenant={{ tenant.name }}
+                  password={{ item.0.password }} 
+                  role={{item.1}}
+   with_subelements: 
+     - "{{tenant_users}}"
+     - roles
+
+# either login creds or endpoint / token
+# endpoint={{ os_service_endpoint }} token={{keystone_admin_token}}
+
+ # - name: Assign roles to the created users
+ #   keystone_user: token={{ keystone_admin_token }} endpoint={{ os_service_endpoint }} 
+ #                  user={{ item.0.name }} role={{item.1}}
+ #                  tenant={{ tenant.name }} 
+ #   no_log: password
+ #   with_subelements: 
+ #     - tenant_users
+ #     - roles
+
+
+ - include: tenant_network.yml
+
+ - include_vars: "../files/security_profiles/{{tenant_security_profile}}"
+
+ - include: tenant_security.yml
+
+ - include: tenant_floatingips.yml
+
+ - name: Template jump hosts file to .ssh/config.d
+   template: dest="{{local_mirror_host.ssh_home}}/config.d/{{tenant_name}}_jump"
+             src="jump_host_ssh_config"
+   delegate_to: "{{local_mirror_host.name}}"
+
+ - name: Assemble jump hosts on local_mirror
+   assemble: dest="{{local_mirror_host.ssh_home}}/config"
+             src="{{local_mirror_host.ssh_home}}/config.d"
+             mode=0640
+             backup=yes
+   delegate_to: "{{local_mirror_host.name}}"           
+
+ - name: Template the ssh_config jump host snippet
+   template: src=jump_host_ssh_config
+             dest="{{ANSIBLE_21CT_HOME}}/{{deploy_vars_relpath}}/{{tenant_name}}/jump_host_ssh_config"
+   delegate_to: localhost
+
+ - name: Template the tenant_message
+   template: src=tenant_message
+            dest="{{ANSIBLE_21CT_HOME}}/roles/openstack/files/completed/{{item.name}}_tenant_message"
+   with_items: tenant_users
+   delegate_to: localhost
+
+ - name: Notify admins of their openstack account details
+   action:
+          module: mail  
+          body: "{{lookup('file', ANSIBLE_21CT_HOME + '/roles/openstack/files/completed/' + item.name + '_tenant_message' )}}"
+          from: kbroughton@21ct.com
+          to: "{{item.email}}"
+          host: "{{mail_server}}"
+          attach: "{{ANSIBLE_21CT_HOME}}/{{deploy_vars_relpath}}/{{tenant_name}}/jump_host_ssh_config"
+          port: 25
+          subject: "21ct Datacenter Openstack New Account Notification"
+   with_items: tenant_users
+   delegate_to: localhost
+   no_log: yes

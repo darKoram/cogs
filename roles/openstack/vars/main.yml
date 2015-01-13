@@ -1,0 +1,53 @@
+---
+
+# vars/main.yml for {{role_name}}
+# Use this file to gather vars common to all tasks for this role
+
+# vars can also go in playbooks
+# - hosts: all
+#    vars: 
+#      ram: "64G"
+#      cores: "16"
+#      time_delay: {quantity: 10, units: "minutes"}
+
+# or include statements in a tasks file eg. tasks/main.yml
+#  - include: my_tasks.yml
+   # vars:
+  #   - var1_used_in_my_tasks=val1
+  #   - var2_used_in_my_tasks=val2
+
+# vars can be accessed in tasks by {{vars["var-name"]}}
+
+############# END HEADER FOR VARS ####################
+
+########## DEVSTACK ########
+
+screen_logs_dir: /var/log/devstack/screen
+devstack_directories: [
+ "{{screen_logs_dir}}"
+]
+
+DEVSTACK_HOME: /home/stack/devstack
+
+openstack_deploy: None
+
+############ HORIZON ###########
+# Mirantis recommended tuning values for ubuntu controllers
+
+hoziron_start_servers: 12
+horizon_processes: 5
+horizon_threads: 15
+
+######### OPENSTACK TENANT DEPLOYMENT VARS #######
+
+#tenant_profiles_basedir: "../files/tenant_profiles"
+#security_profiles_basedir: "../files/security_profiles"
+# Can't path properly because the ANSIBLE_DEV_HOME gets evaluated to '' silently
+# For some reason ansible can't handle the expansion of too many vars in a path.
+#security_profiles_basedir: "{{ANSIBLE_DEV_HOME}}/roles/openstack/files/security_profiles"
+
+######## OPENSTACK CONTROLLER VARS ######
+
+openstack_controller_paths: 
+  - /etc/ansible
+  - /tmp/ansible/scripts

@@ -1,0 +1,142 @@
+---
+
+# deploy_vars/all
+
+gather_facts: yes
+
+# curl seems broken unless this is set
+ssl_certs_path: "/etc/ssl/certs/ca-certificates.crt"
+
+
+################ USERS ##########
+
+
+admin_users: ['sudo']
+normal_users: []
+
+##########################################################################
+# UFW 
+##########################################################################
+
+ufw_enabled: "no"
+
+#########################################
+# Security
+#########################################
+
+keys_and_certs_home: "/etc/pki"
+
+##############################################################
+# ANSIBLE 
+##############################################################
+
+# home of the user executing ansible
+HOME: "{{lookup('env', 'HOME')}}"
+
+# Root of the ansible tree on the ansible controller machine
+# Assumes this is executed from parent to roles directory, deploy_vars etc
+ANSIBLE_PROJECT_HOME: "{{lookup('env', 'PWD')}}"
+
+local_mirror_host:
+  name: localhost
+
+# Ansible is still using python2
+pip_executable: /usr/bin/pip
+
+mapped_interface_device_1: ansible_eth1
+
+# Vagrant uses 10.0.2.15 NAT ip for eth0 even with multi-machine mode.
+# ansible_default_ipv4 uses eth0 so we need to de-couple our functional 
+# interfaces (zk, es etc) from any particular interface.
+# Ansible gather_facts doesn't seem to work on private_network ips in vagrant
+mapped_interface_1: "{{mapped_interface_device_1['ipv4']['address']}}"
+
+
+##########################################################################
+# ELASTICSEARCH 
+##########################################################################
+
+# It's important to understand, that it's a Java application which 
+# stores indexes on a file system, which has a cache too and JVM actually 
+# likes that, so leaving at least 40% of total 
+# RAM available to the file system cache is a great idea.
+ES_HEAP_SIZE: 256m
+
+elasticsearch:
+  cluster:
+    name: "elasticsearch_vagrant" # Please over-ride cluster.name in your vagrant project
+  indices:
+    store:
+      throttle:
+        max_bytes_per_sec: 5mb
+        type: merge
+
+# http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/index-modules-store.html
+# Another important aspect of memory based storage is the 
+# fact that Elasticsearch supports storing the index in 
+# memory outside of the JVM heap space using the 
+# "Memory" storage type. It translates to the fact that 
+# there is no need for extra large JVM heaps 
+# (with their own consequences) for storing the index in memory.
+# https://groups.google.com/forum/#!msg/elasticsearch/qftwnb1p1sw/4umEIUoaCpsJ
+# type = mmapfs for linux, niofs for macosx.  Modify for vagrant.
+      type: mmapfs
+      fs:
+        memory:
+          enabled: "false" 
+
+ES_MAX_MAP_COUNT: 128124
+# See also Vertica max_map_count 
+# https://my.vertica.com/docs/6.1.x/HTML/index.htm#12962.ht
+
+install_marvel: "yes"
+
+# Over-ride gpstathis.elasticsearch/defaults/main.yml
+elasticsearch_install_java: false
+elasticsearch_timezone: "America/Chicago"
+elasticsearch_service_startonboot: yes
+elasticsearch_plugins:
+  - { name: 'elasticsearch/elasticsearch-mapper-attachments/2.0.0' }
+  - { name: 'com.github.richardwilly98.elasticsearch/elasticsearch-river-mongodb/2.0.0' }
+  - { name: 'mobz/elasticsearch-head' }
+
+# An additional basic play that queries nodes_stats via cron and
+# creates a historical index stored in elasticsearch, displayed by kibana.
+install_kibana_nodes_stats: "no"
+
+
+
+# If hash_behavior = merge for lists: a.list merge b.list = b.list
+dns:
+  name_servers: 
+    - 127.0.1.1
+
+###############################################
+# Logstash
+###############################################    
+logstash_ssl_dir: "{{keys_and_certs_home}}/logstash"
+logstash_ssl_certificate_file: "logstash-forwarder.crt"
+logstash_ssl_key_file: "logstash-forwarder.key"
+
+
+#########################################
+# Gitlab
+#########################################
+gitlab_package_url: "https://downloads-packages.s3.amazonaws.com/ubuntu-14.04/gitlab_7.6.2-omnibus.5.3.0.ci.1-1_amd64.deb"
+
+# General config.
+gitlab_external_url: "https://gitlab/"
+gitlab_git_data_dir: "/var/lib/gitlab/git-data"
+
+# SSL Configuration.
+gitlab_redirect_http_to_https: "false"
+#gitlab_ssl_certificate: "{{keys_and_certs_home}}/gitlab/gitlab.crt"
+#gitlab_ssl_certificate_key: "{{keys_and_certs_home}}/gitlab/gitlab.key"
+
+# SSL Self-signed Certificate Configuration.
+gitlab_create_self_signed_cert: true
+gitlab_self_signed_cert_subj: "/C=US/ST=Texas/L=Austin/O=IT/CN=gitlab"
+
+#########################################
+# Jenkins
+#########################################

@@ -1,0 +1,20 @@
+# aws_manage/tasks/cloud_formation.yml
+
+
+# Use the example from ansible documentation
+# pulled from their github repo to files/cloudformation-example.json
+
+- name: Launch ansible cloudformation example
+  cloudformation:
+    stack_name: "ansible-cloudformation"
+    state: "{{aws_cloud_formation_state | default(present) }}"
+    region: "us-east-1"
+    disable_rollback: true
+    template: "files/cloudformation-example.json"
+    template_parameters:
+      KeyName: "{{aws_admin_keyname}}"
+      DiskType: "ephemeral"
+      InstanceType: "m1.small"
+      ClusterSize: 3
+    tags:
+      Stack: "ansible-cloudformation"

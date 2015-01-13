@@ -1,0 +1,23 @@
+# gen_tenant_keys_locally.yml
+
+ - name: Make an identities directory for ssh 
+   file: dest="{{src_ssh_home}}/identities" mode=0700 state=directory
+
+ - debug: msg="{{tenant_name}}"
+ 
+ - name: Generate a key pair for the tenant
+   shell: creates="{{src_ssh_home +'/identities/'+ tenant_name +'_key'}}"
+          ssh-keygen -f "{{src_ssh_home}}/identities/{{tenant_name}}_key" -t rsa -N ''
+
+ - name: Create /etc/ssh/identities for tenant keys
+   file: state=directory dest="{{identity_files_home}}" 
+         owner="{{lookup('env','USER')}}"
+   sudo: yes
+
+ - name: Symlink the keyfiles to /etc/ssh/identities
+   file: state=link src="{{item.src}}"
+         dest="{{item.dest}}" owner="{{lookup('env','USER')}}"
+   with_items:
+    - { 'src': "{{src_ssh_home}}/identities/{{tenant_name}}_key.pub", 'dest': "{{identity_files_home}}/{{tenant_name}}_key.pub" }
+    - { 'src': "{{src_ssh_home}}/identities/{{tenant_name}}_key", 'dest': "{{identity_files_home}}/{{tenant_name}}_key" }
+   sudo: yes

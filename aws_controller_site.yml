@@ -1,0 +1,14 @@
+
+- hosts: all
+  gather_facts: yes
+  tasks: 
+    - group_by: key={{ansible_os_family}}
+
+- hosts: aws
+  roles: 
+    - aws_manage
+  tags:
+    - aws
+
+
+    

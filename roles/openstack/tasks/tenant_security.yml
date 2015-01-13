@@ -1,0 +1,54 @@
+# tenant_security.yml
+
+
+ - name: Find the id for the tenant's default security group
+   shell: quantum security-group-list --format=csv --quote=none --column=id
+                --os-tenant-name {{ admin_tenant }} --os-username {{ admin_tenant_user }}
+                --os-password {{ admin_pass }} --os-auth-url "{{os_auth_url}}"
+                --tenant-id={{ tenant_id }} --name=default 2>/dev/null | tail -1
+   register: default_sg
+
+ - name: Register the security group rules
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              security-group-rule-list --tenant-id {{ tenant_id }}
+                      --column direction --column id --format json
+   register: register_security_group_rules
+ 
+ - debug: msg="{{register_security_group_rules }}"
+
+ - debug: msg="{{register_security_group_rules.stdout | to_json }}"
+
+ - name: Delete all but egress rules for the security group
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              security-group-rule-delete "{{item.id}}"
+   when: item.direction != 'egress'
+   with_items: register_security_group_rules.stdout | default('') | to_json
+   when: delete_tenant is not defined
+
+ - name: Add a rule in the default security group to allow ssh in
+   command: quantum security-group-rule-create {{ default_sg.stdout }} 
+            --tenant-id {{ tenant_id }}
+            --protocol tcp --port-range-min 22 --port-range-max 22 
+            --remote-ip-prefix 0.0.0.0/0
+            --os-tenant-name {{ admin_tenant }} --os-username {{ admin_tenant_user }}
+            --os-password {{ admin_pass }} --os-auth-url "{{os_auth_url}}"
+
+ - name: Add a rule in the default security group to allow icmp in
+   command: quantum security-group-rule-create {{ default_sg.stdout }} 
+            --tenant-id {{ tenant_id }}
+            --protocol icmp --port-range-min 1 --port-range-max 255 
+            --remote-ip-prefix 0.0.0.0/0
+            --os-tenant-name {{ admin_tenant }} --os-username {{ admin_tenant_user }}
+            --os-password {{ admin_pass }} --os-auth-url "{{os_auth_url}}"
+
+
+# quantum security-group-rule-create --tenant-id --protocol tcp --port-range-min 22 \
+#             --port-range-max 22 --remote-ip-prefix 0.0.0.0/0 \
+#             --os-tenant-name {{ admin_tenant }} --os-username admin \
+#             --os-password  --os-auth-url ""

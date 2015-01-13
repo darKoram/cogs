@@ -1,0 +1,14 @@
+---
+# tasks file for ansible_controller
+
+- name: Install apt packages
+  apt: name={{item}}
+  with_items: _ansible_controller_apt_packages
+
+# Would like to use ansible-galaxy and meta instead
+# but following docs for branch pinning did not work
+#
+# Could also investigate Ansible Repo Manager
+# https://github.com/mirskytech/ansible-role-manager 
+ gem: name=librarian-ansible
+

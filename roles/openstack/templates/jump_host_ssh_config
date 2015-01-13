@@ -1,0 +1,13 @@
+# {{ansible_managed}}
+# jump_host_ssh_config
+
+
+Host {{pivot_floating_ip}}
+    User {{default_image.user}}
+    HostName {{tenant.name}}-pivot
+    IdentityFile /etc/ssh/identities/{{tenant_name}}_key
+
+Host {{tenant.name}}-*
+    User {{default_image.user}}
+    ProxyCommand ssh {{pivot_floating_ip}} -W %h:%p
+    IdentityFile /etc/ssh/identities/{{tenant_name}}_key

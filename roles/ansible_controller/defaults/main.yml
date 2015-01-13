@@ -1,0 +1,11 @@
+---
+# defaults file for ansible_controller
+
+# Install ansible extensions for Sublime Text Editor
+ansible_controller_sublime: no
+sublime_text_version: 3
+
+_ansible_controller_apt_packages: 
+  - rubygems-integration
+
+ansible_grok_git_url:  https://github.com/yetu/ansible-logstash/blob/master/files/ansible.grok

@@ -1,0 +1,1 @@
+/home/kesten/vcp/git/ansible/plugins/inventory/gce.py

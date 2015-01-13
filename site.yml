@@ -1,0 +1,27 @@
+
+- hosts: all
+  gather_facts: yes
+  tasks: 
+    - group_by: key={{ansible_os_family}}
+
+- hosts: jenkins
+  gather_facts:  "{{ jenkins_facts | default(False)"
+  roles:
+    - geerlingguy.jenkins 
+  tags:
+    - jenkins 
+    
+- hosts: gce_hadoop
+  sudo: yes
+  roles: 
+    - gce_hadoop
+
+# - hosts: gcloud_vms
+#   gather_facts: "{{gcloud_vms_facts | default(gather_facts)}}"
+
+
+# - hosts: spark
+#   roles: spark
+#   gather_facts: "{{spark_facts | default(gather_facts)}}"
+#   tasks: 
+#     - group_by: key={{ansible_os_family}}

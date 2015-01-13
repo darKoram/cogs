@@ -1,0 +1,50 @@
+GIT
+  remote: https://github.com/Traackr/ansible-elasticsearch
+  ref: master
+  sha: 100a944eac20780696cfd2a4776ce696cab74fc6
+  specs:
+    gpstathis.elasticsearch (0.0.0)
+
+GIT
+  remote: https://github.com/gcporras/ansible-role-virtualenvwrapper
+  ref: master
+  sha: 8c2905b0556926214a9ab31b9a6609e1034148c5
+  specs:
+    gcporras.virtualenvwrapper (1.0.1)
+
+GIT
+  remote: https://github.com/geerlingguy/ansible-role-elasticsearch-curator
+  ref: master
+  sha: 10938ece833fe5db4aa1fbab5332c9fb45e8a231
+  specs:
+    geerlingguy.elasticsearch-curator (0.0.0)
+
+GIT
+  remote: https://github.com/geerlingguy/ansible-role-kibana
+  ref: master
+  sha: 3e6c3cf822f395938acf752e968f0ffcaada55bc
+  specs:
+    geerlingguy.kibana (0.0.0)
+
+GIT
+  remote: https://github.com/geerlingguy/ansible-role-logstash
+  ref: master
+  sha: 0ead3f6f93a227263241ac4106d223545e68b658
+  specs:
+    geerlingguy.logstash (0.0.0)
+
+GIT
+  remote: https://github.com/geerlingguy/ansible-role-nginx
+  ref: master
+  sha: fdc9a7da78245163182a130e653eeada0eb330ab
+  specs:
+    geerlingguy.nginx (0.0.0)
+
+DEPENDENCIES
+  gcporras.virtualenvwrapper (>= 0)
+  geerlingguy.elasticsearch-curator (>= 0)
+  geerlingguy.kibana (>= 0)
+  geerlingguy.logstash (>= 0)
+  geerlingguy.nginx (>= 0)
+  gpstathis.elasticsearch (>= 0)
+

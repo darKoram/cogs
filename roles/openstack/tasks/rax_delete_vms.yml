@@ -1,0 +1,39 @@
+---
+
+# roles/openstack/tasks/create_vms.yml
+
+ # - name: .
+ #   rax_clb: username=nodefault
+ #            virtualenv=nodefault
+ #            weight=nodefault
+ #            region=nodefault
+ #            load_balancer_id=nodefault
+ #            state=present
+ #            wait_timeout=30
+ #            condition=nodefault
+ #            address=nodefault
+ #            credentials=nodefault
+ #            api_key=nodefault
+ #            type=nodefault
+ #            port=nodefault
+ #            node_id=nodefault
+ #            wait=no
+
+
+ - name: Server build request
+   local_action:
+     module: rax
+     credentials: requested_hosts['creds']['pyrax_cfg']
+     service: cloudservers
+     name: "{{item.hostname}}"
+     wait: no
+     state: absent
+   with_items: requested_hosts['hostvars']
+
+#The next two are just a copy, but easier to make use of relative dirs than use a shell
+ - name: Copy requested_hosts file to completed
+   local_action: copy src=requested/requested_hosts.yml dest=complted/requested_hosts.yml
+                 backup=yes
+
+ - name: Delete original requested/requested_hosts.yml
+   local_action: file requested/requested_hosts.yml state=absent

@@ -1,0 +1,77 @@
+# Ansible generated tenant_message
+
+An account in the project {{tenant.name}} has been created for you.
+                  
+ login to {{horizon_dashboard}} 
+ user {{item.name}} 
+ password {{item.password}}  
+
+ You will need a vpn connection
+ to the datacenter for the horizon link or ssh access.
+ 
+
+ ########## Modify .ssh/config #############
+
+  
+ The tenant admin should past the jump_host_ssh_config (see attachment)
+ to their ~/.ssh/config file.
+
+
+########## Modify {{tenant_name}}.yml in deploy_vars directory #########
+
+ The following public ips have been allocated.
+ Please add them in
+ 21ct-ansible/{{deploy_vars_relpath}}/{{tenant_name}}/{{tenant_name}}.yml
+
+
+ torch_floating_ip: {{torch_floating_ip}} 
+ pivot_floating_ip: {{pivot_floating_ip}}
+
+
+Also replace values in the above file with the following snippet
+tenant:
+  id: {{tenant_id}}
+  network:
+    provider_network:
+      segmentation_id: {{register_segmentation_id.stdout}}    
+
+
+# DEPRECATED, the above is auto-filled now, we hope
+#by browsing to horizon
+#Find the tenant.id by browsing to your project.  Click "Networks" down on the left tab.
+#Click on the private_subnet.  tenant.id = Project ID
+#The segmenation_id can be gathered by a tenant user by choosing the "Networks" tab 
+#and clicking on the private network.
+
+Then change the {{tenant_name}}_tenant_hosts file to uncomment
+localhost and comment out node-8 (the controller node)
+
+If you need to customize elasticsearch or torch do so in the {{tenant_name}} folder
+in the deploy_vars tree.
+
+When finished, commit and push the changes to stash.
+
+
+
+########### /etc/hosts ############
+
+Add the etc_hosts snippet to your /etc/hosts
+
+The following pulbic ips are available.
+To avoid conflicts with private ip mappings of lynx01 etc in .ssh/config
+we use the full name torch01 etc for public ips.
+# Eventually this will be replaced with a single haproxy called torch
+
+{% set torch_name = tenant.name+'-torch' %}
+{{torch_floating_ip + ' ' + torch_name + ' ' + torch_name+dns.fqdn_suffix}} 
+{% set pivot_name = tenant.name + '-pivot' %}
+{{pivot_floating_ip + ' ' + pivot_name + ' ' + pivot_name+dns.fqdn_suffix}} 
+
+
+######### Next: Create Vms Play #######
+
+Email the tenant admin that they are ready to create the vms starting the step 
+following "Create a tenant_hosts file and the openstack tenant" at
+http://confluence.21technologies.com/display/21DC/Automated+Provisioning+vms+in+Openstack
+
+ansible-playbook -i {{tenant_name}}_tenant_hosts roles/openstack/playbooks/create_vms_play.yml -e "home_prefix=/home" -K -vvvv

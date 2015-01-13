@@ -1,0 +1,5 @@
+---
+
+# deploy_vars/ansible_controller.yml
+
+dummy: val

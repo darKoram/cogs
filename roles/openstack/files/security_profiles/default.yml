@@ -1,0 +1,15 @@
+---
+# openstack/files/security_profiles/soft.yml
+
+security_settings: 
+  groups:
+    - name: default
+      rules:
+        - ip_protocol: "ICMP"
+          from_port: 1
+          to_port: 255
+          source_cidr: "0.0.0.0/0"
+        - ip_protocol: "TCP"
+          from_port: 22
+          to_port: 22
+          source_cidr: "0.0.0.0/0"

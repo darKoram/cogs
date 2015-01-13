@@ -1,0 +1,13 @@
+
+
+localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python
+
+
+[deploy_vars:children]
+ansible_controller
+[ansible_controller]
+localhost
+
+[monitoring]
+localhost
+

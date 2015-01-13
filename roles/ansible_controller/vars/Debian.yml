@@ -1,0 +1,7 @@
+---
+
+# ansible_controller/vars/Debian.yml
+
+ansible_controller_sublime2_packages_path: 
+ansible_controller_sublime3_packages_path: "{{HOME}}/.config/sublime-text-3/Packages/User"
+ansible_controller_sublime_packages_path: "{{ansible_controller_sublime3_packages_path}}"

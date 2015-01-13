@@ -1,0 +1,95 @@
+---
+# openstack/tasks/nova_delete_vms.yml
+
+ - include_vars: "../files/requested_hosts/{{requested_hosts_file}}"
+
+ - debug: msg="{{requested_hosts_file}}"
+ 
+# - debug: msg="{{requested_hosts}}"
+
+ - name: Remove any pre-assigned floating ips
+   quantum_floating_ip_associate: 
+        state=absent
+        login_username="{{tenant_name}}_admin"
+        login_password="{{tenant.name}}"
+        login_tenant_name="{{tenant.name}}"
+        auth_url="{{os_auth_url}}"
+        ip_address="{{item.floating_ip}}"
+        instance_name="{{item.hostname}}"
+   when: item.floating_ip != '' and item.floating_ip != 'yes'
+   with_items: requested_hosts | default([])
+   ignore_errors: yes
+# May not have ip associated
+
+#TODO floating_ip evalutes to yes.  Need ip to remove it
+ # - name: Remove floating ips from free pool
+ #   quantum_floating_ip_associate: 
+ #        state=absent
+ #        login_username="{{admin_tenant_user}}"
+ #        login_password="{{admin_pass}}"
+ #        login_tenant_name="{{admin_tenant}}"
+ #        auth_url="{{os_auth_url}}"
+ #        ip_address="{{item.floating_ip}}"
+ #        instance_name="{{item.hostname}}"
+ #   when: "{{item.floating_ip == 'yes'}}"
+ #   with_items:
+ #     - "{{requested_hosts}}"
+# login_username="{{tenant_name}}_admin"
+# login_password="{{tenant_name}}"        
+
+ # - name: Get all ports allocated to tenant 
+ #   shell: quantum --os-username="{{ admin_tenant_user }}" 
+ #                  --os-tenant-name="{{ admin_tenant }}"
+ #                  --os-auth-url="{{ os_auth_url }}"
+ #                  --os-password="{{ admin_pass }}"
+ #                  port-list "{{tenant_id}}" 
+ #                  --format json
+ #   register: register_ports
+
+
+ - name: Delete all tenant vms
+   nova_compute: login_username="{{tenant_name}}_admin"
+                 login_password="{{tenant.name}}"
+                 login_tenant_name="{{tenant.name}}"
+                 auth_url="{{os_auth_url}}"
+                 state=absent
+                 name="{{item.hostname}}"
+   with_items: requested_hosts | default([])
+
+# api key is tenant password
+# rax was failing to delete vms sometimes, possibly if volumes were attached 
+ # - name: Delete all tenant vms with rax
+ #   rax: identity_type="{{os_auth_strategy}}"
+ #        username="{{tenant_name}}_admin"
+ #        api_key="{{tenant.name}}"
+ #        tenant_id="{{tenant_id}}"
+ #        auth_endpoint="{{os_service_endpoint}}"
+ #        region="{{openstack.region}}"
+ #        state=absent
+ #        name="{{item.hostname}}"
+ #        flavor="{{item.flavor_id}}"
+ #        image="{{item.image_id}}"
+ #        wait=yes
+ #        wait_timeout=60
+ #   with_items: "{{requested_hosts | default([])}}"
+
+
+ - name: Delete the block storage volumes
+   cinder_volume: state=absent
+                  login_username="{{tenant_name}}_admin"
+                  login_password="{{tenant.name}}"
+                  login_tenant_name="{{tenant.name}}"
+                  auth_url="{{os_auth_url}}"
+                  name="{{item.1.name}}"
+                  size="{{item.1.size}}"
+   with_subelements:
+     - "{{requested_hosts | default([])}}"
+     - attached_volumes
+   when: keep_volumes is not defined
+
+ - nova_keypair: state=absent 
+                 login_username="{{tenant_name}}_admin"
+                 login_password="{{tenant.name}}"
+                 login_tenant_name="{{tenant.name}}"
+                 auth_url="{{os_auth_url}}"
+                 name="{{tenant_name}}_key"

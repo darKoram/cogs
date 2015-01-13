@@ -1,0 +1,6 @@
+---
+
+  - name: Install pip dependencies
+    pip: name={{item}}
+    with_items: pip_openstack_packages
+

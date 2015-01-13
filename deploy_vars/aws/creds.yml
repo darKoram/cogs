@@ -1,0 +1,7 @@
+# aws/creds.yml
+
+aws_ssl_dir: "{{keys_and_certs_home}}/aws"
+aws_ssl_certificate_file: "aws-cli.crt"
+aws_ssl_key_file: "aws-cli.key"
+aws_admin_key_name:  aws_kesten
+aws_admin_public_ssh_key: "{{lookup('env','HOME')}}/.ssh/id_rsa.pub"

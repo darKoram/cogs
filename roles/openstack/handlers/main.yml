@@ -1,0 +1,27 @@
+---
+
+# handlers for role {{role_name}}
+
+# ‘notify’ actions are triggered at the end of each block 
+# of tasks in a playbook, and will only be triggered once even if notified by multiple different tasks.
+# Typically, only reboots and service restarts
+# need handlers.  
+
+# This handler might be
+#   - name: Distribute configs
+#     template: src={{item.src}} dest={{item.dest}} 
+#     with_items: 
+#         - { src: "/my/source1",  dest: "/cluster/dest1" }
+#         - { src: "/my/source1",  dest: "/cluster/dest1" }
+#
+
+# And it would be called by a task like this
+# - name: Task that calls handler
+#   notify:
+#    - Distribute configs
+
+# If notify is sprinkled over several task files, you need
+# only modify this handler file to add a new config file 
+# to the list that gets pushed.
+
+############ END OF HANDLER HEADER ###############

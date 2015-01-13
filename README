@@ -1,0 +1,36 @@
+README
+
+One git repo per role allows users to pick and choose 
+just what they need rather than requiring them to 
+download 40+ roles when they only want 4.
+
+If roles are highly inter-related, such as 
+app/platform/kafka/zookeeper with variables connecting
+the roles, then git workflow becomes clunky, having to 
+do multiple check-outs and commits to change the name 
+of one variable, for example.  So highly related groupings
+should of roles into a single git repo should be used when
+needed.
+
+Typical workflow would be:
+1. Identify new service
+2. Search ansible-galaxy for best approximation to need.
+3. Fork selected ansible-galaxy role
+    a) if defaults/main.yml vars are reasonable defaults
+        leave them be and over-ride in deploy_vars
+    b) expect to always need to make some mods to tasks/.
+    c) call the pristine fork branch 'upstream'
+    d) call the development head 'master'
+    e) cut releases from 'master' anytime a release is made
+    f) pin the version using ansible-librarian or other means
+       for each ansible project.
+    g) issue pull requests to role owner for generic  
+        improvements
+
+
+Roles directory holds
+ansible_controller - a role for turning a machine into an ansible controller machine
+aws_management - top tier devOps control of all things aws
+openstack - uses a mix of rax, openstack ansible modules 
+and plenty of commandline tools when that was 
+insufficient

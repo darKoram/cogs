@@ -1,0 +1,97 @@
+---
+
+# openstack/files/requested_hosts/e3standard1.yml
+
+# disk_size in Gb is the local disk taken from the compute host's first two raid drives.
+
+#TODO validate that hostname fields are valid hostnames (no underscores etc)
+
+pivot_hostname: "{{tenant.name}}-pivot"
+log_mount: vdb
+data_mount: vdc
+
+requested_hosts:
+ - short_hostname: lynx01
+   hostname: "{{tenant.name}}-lynx01"
+   roles: torch
+   flavor_id: "{{torch_flavor.id}}"
+   floating_ip: "yes"
+   image_id: "{{torch_image.id}}"
+   availability_zone: "" 
+   security_groups: default
+   attached_volumes: 
+     - device_name: "{{log_mount}}"
+       name: "lynx01_{{log_mount}}"
+       size: 20
+     - device_name: "{{data_mount}}"
+       name: "lynx01_{{data_mount}}"
+       size: 100 
+ # - short_hostname: elastic01
+ #   hostname: "{{tenant.name}}-elastic01"
+ #   roles: elasticsearch_master,elasticsearch_data
+ #   flavor_id: "{{elasticsearch_flavor.id}}" 
+ #   floating_ip: ""
+ #   image_id: "{{elasticsearch_image.id}}"
+ #   availability_zone: "{{availability_zones.0}}"
+ #   security_groups: default
+ #   attached_volumes: 
+ #     - device_name: "{{log_mount}}"
+ #       name: "elastic01_{{log_mount}}"
+ #       size: 20
+ #     - device_name: "{{data_mount}}"
+ #       name: "elastic01_{{data_mount}}"
+ #       size: 100 
+ # - short_hostname: elastic02
+ #   hostname: "{{tenant.name}}-elastic02"
+ #   roles: elasticsearch_master,elasticsearch_data
+ #   flavor_id: "{{elasticsearch_flavor.id}}" 
+ #   floating_ip: ""
+ #   image_id: "{{elasticsearch_image.id}}"
+ #   availability_zone: "{{availability_zones.1}}"
+ #   security_groups: default
+ #   attached_volumes: 
+ #     - device_name: "{{log_mount}}"
+ #       name: "elastic02_{{log_mount}}"
+ #       size: 20
+ #     - device_name: "{{data_mount}}"
+ #       name: "elastic02_{{data_mount}}"
+ #       size: 100 
+ # - short_hostname: elastic03
+ #   hostname: "{{tenant.name}}-elastic03"
+ #   roles: elasticsearch_master,elasticsearch_data
+ #   flavor_id: "{{elasticsearch_flavor.id}}" 
+ #   floating_ip: ""
+ #   image_id: "{{elasticsearch_image.id}}"
+ #   availability_zone: "{{availability_zones.2}}"
+ #   security_groups: default
+ #   attached_volumes: 
+ #     - device_name: "{{log_mount}}"
+ #       name: "elastic03_{{log_mount}}"
+ #       size: 20
+ #     - device_name: "{{data_mount}}"
+ #       name: "elastic03_{{data_mount}}"
+ #       size: 100 
+ - short_hostname: pivot
+   hostname: "{{tenant.name}}-pivot"
+   roles: pivot                                  
+   flavor_id: "{{pivot_flavor.id}}"
+   floating_ip: "{{pivot_floating_ip}}"
+   image_id: "{{pivot_image.id}}"
+   availability_zone: ""
+   security_groups: default
+   attached_volumes: []
+ # - short_hostname: ansible
+ #   hostname: "{{tenant.name}}-ansible"
+ #   roles: ansible_controller,lynx3_data_source
+ #   flavor_id: "{{ansible_flavor.id}}"
+ #   floating_ip: "yes"
+ #   image_id: "{{ansible_image.id}}"
+ #   availability_zone: "" 
+ #   security_groups: default
+ #   attached_volumes: 
+ #     - device_name: "{{log_mount}}"
+ #       name: "ansible_{{log_mount}}"
+ #       size: 20
+ #     - device_name: "{{data_mount}}"
+ #       name: "ansible_{{data_mount}}"
+ #       size: 100 

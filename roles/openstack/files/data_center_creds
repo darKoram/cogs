@@ -1,0 +1,11 @@
+[keystone]
+username = admin
+password = admin
+#user_id = ************************************
+tenant_id = ************************************
+identity_type = keystone
+debug = True
+verify_ssl = False
+region = RegionOne
+#export SERVICE_TOKEN=*********
+#export SERVICE_ENDPOINT=http://10.x.y.z:35357/v2.0/

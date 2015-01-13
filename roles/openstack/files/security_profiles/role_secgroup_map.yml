@@ -1,0 +1,13 @@
+# openstack/files/security_profiles/role_secgroup_map.yml
+
+role_secgroup_map: {
+ "hdfs_datanode": "HDFS",
+ "hdfs_namenode": "HDFS",
+ "hdfs_secondary_namenode": "HDFS",
+ "accumulo_master": "Accumulo",
+ "accumulo_slave": "Accumulo",
+ "zookeeper": "Zookeeper",
+ "sqrrl": "Sqrrl",
+ "elasticsearch_data": "ElasticSearch",
+ "elasticsearch_master": "ElasticSearch"
+}

@@ -1,0 +1,29 @@
+# aws_manage/tasks/route53.yml
+
+# Add new.foo.com as an A record with 3 IPs
+- route53:
+      command: create
+      zone: foo.com
+      record: new.foo.com
+      type: A
+      ttl: 7200
+      value: 1.1.1.1,2.2.2.2,3.3.3.3
+
+# Retrieve the details for new.foo.com
+- route53:
+      command: get
+      zone: foo.com
+      record: new.foo.com
+      type: A
+  register: rec
+
+- debug: msg="{{rec}}"
+
+# Delete new.foo.com A record using the results from the get command
+- route53:
+      command: delete
+      zone: foo.com
+      record: "{{ rec.set.record }}"
+      type: "{{ rec.set.type }}"
+      value: "{{ rec.set.value }}"
+  when: aws_route53_delete == "yes"

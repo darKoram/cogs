@@ -1,0 +1,12 @@
+
+grouped_users:
+  group:
+    name: admin
+    users:
+      - kesten
+      - peter
+  group: 
+     name: dev
+     users:
+       - dev1
+       - dev2

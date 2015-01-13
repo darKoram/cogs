@@ -1,0 +1,15 @@
+---
+# This is the main tasks file.  It must be included if there is a tasks/ directory.
+# Use it to include other tasks if there are any, or just do it all here.
+
+ - debug: msg="{{inventory_hostname}}"
+
+ - include: bootstrap.yml
+   when: inventory_hostname in groups['openstack_manager']
+
+ - include: devstack.yml
+   when: openstack_deploy == "devstack_single"
+
+ - include: ubuntu_controllers.yml 
+   when: inventory_hostname in groups['openstack_controller']
+

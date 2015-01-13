@@ -1,0 +1,59 @@
+---
+
+# common/meta/main.yml
+# Used for including other roles prior to executing 
+# this role's tasks
+
+################  META HEADER ###############
+
+# dependencies:
+#   - { role: '/path/to/common/roles/foo', x: 1 }
+
+# This allows roles to include other roles, and should allow for greater 
+# re-use of stock roles.
+
+# To create dependencies, just add a meta/ directory to your role with a 
+# main.yml file. As an example, if we had a "drupal" role, 
+# then the meta/main.yml file might contain something like this:
+
+#    ---
+#    dependencies:
+#    - { role: php, memory_limit: "128M" }
+#    - { role: web_server, http_port: 8080 }
+#    - { role: memcache, listen_address: "0.0.0.0" }
+
+# It is possible for dependent roles to have their own dependencies. 
+# Continuing the example above, the web_server role could have dependencies 
+# on nginx, fastcgi, and varnish roles. 
+
+# Note the variable passed in with the web_server role: http_port. That 
+# variable will be seen by any dependent roles too, so the nginx and 
+# varnish roles could use that variable in their configuration templates 
+# without having to set it themselves (or it will override the defaults 
+# stored in vars/main.yml for each role).
+
+# Dependent roles are executed before the role that requires them, 
+# so again continuing the example above, the order of execution 
+# would be:
+
+#  php -> nginx -> fastcgi -> varnish -> web_server -> memcache -> drupal
+
+# Last but not least, you can use fully qualified paths for the role names 
+# just like with regular role includes, so dependent roles do not have 
+# to be in the same directory as the playbook that uses them. For example:
+
+#    ---
+#    dependencies:
+#    - { role: "/path/to/common/roles/nginx" }
+
+# However, jinja2 style variables like {{mypath}} will not work.
+# User $mypath instead.
+
+# site.yml and include:s can also be used to force dependencies in the 
+# context of structured playbooks.
+# But if both roles A, and B are to be callable from anywhere and A
+# depends on B, then we need to make B a dependency of A here because we
+# won't have the structure of site.yml or the playbook to enforce it otherwise.
+
+################### END OF META HEADER #####################
+

@@ -1,0 +1,385 @@
+---
+# openstack/tasks/tenant_delete.yml
+
+ # - name: See if the tenant exists
+ #   shell: curl -H "X-Auth-Token:{{ keystone_admin_token }}" "{{os_service_endpoint}}/tenants?name={{tenant.name}}"
+ #   register: register_tenant
+
+ - include_vars: "../../../files/requested_hosts/{{requested_hosts_file}}"
+
+ - include: ../tasks/tenant_get_id.yml
+
+ - include: nova_delete_vms.yml
+   when: os_api == 'nova'
+
+#TODO get all floating ips of this project
+# The official openstack docs for floatingip retrieval via REST is broken.
+# The floatingips endpoint is not found. 
+# http://docs.openstack.org/api/openstack-network/2.0/content/router_ext_ops_floatingip.html
+ # - name: Get a list of the floating ips of this tenant
+ #   uri: url=
+
+# It seems odd, but nova api is much better than quantum at getting floating
+# ips associated to a tenant.  However, we need the floating ip ids -> quantum.
+ - name: Get a list of the floating ip ids of this subnet via nova
+   shell: nova --os-tenant-name {{ tenant.name }}
+                --os-username {{ admin_tenant_user }}
+                --os-password {{ admin_pass }}
+                --os-auth-url "{{os_auth_url}}"
+                  floating-ip-list | grep "[1-255]" | cut -d" " -f 2
+   register: register_floating_ips
+
+#TODO when dict_from_list is done, this will be much cleaner retrieving
+# data with -f json and parsing as a dict.
+# - name: Get a list of the floating ip ids of this subnet by subnet
+#   shell: quantum floatingip-list | grep "{{subnet_base | replace('.','\.')}}\." | cut -d' ' -f2
+#   register: register_floating_ip_ids
+
+ - name: Get a list of the floating ip ids of this subnet by ip
+   shell: quantum floatingip-list | grep "{{item | replace('.','\.')}}" | cut -d' ' -f2
+   register: register_floating_ip_ids
+   with_items: register_floating_ips.stdout_lines
+
+# If we deleted the project, the vms got deleted too
+# but floating ips are still attached to subnet
+ # - name: Remove any floating ips from vms
+ #   quantum_floating_ip: 
+ #        state=absent
+ #        login_username="{{tenant_name}}_admin"
+ #        login_password="{{tenant_name}}"
+ #        login_tenant_name="{{tenant.name}}"
+ #        auth_url="{{os_auth_url}}"
+ #        ip_address="{{item}}"
+ #   with_items: register_floating_ip_ids.results
+
+ - debug: msg="{{register_floating_ip_ids}}"
+
+ - name: Delete the floating ips
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ tenant.name }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+                  floatingip-delete "{{item}}"
+   with_items: register_floating_ip_ids.stdout_lines | default([])
+
+#TODO careful with this regexp on grep.  Sketchy.  Without the \.
+# it would match 192.168.61.2 as well as 192.168.6.2
+# but this if difficult to test
+ - name: Get the fixed ips for the subnet
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+                  port-list | grep "{{subnet_base}}\." | grep -v "{{subnet_base}}\.1" | cut -d" " -f2
+   register: register_fixed_ips
+
+ - debug: msg="{{register_fixed_ips}}"
+
+ - name: Delete the fixed ips
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ tenant.name }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+                  port-delete "{{item}}"
+   with_items: register_fixed_ips.stdout_lines | default([])
+   ignore_errors: yes   
+# If no ips exist neither does stdout_lines 
+
+
+#curl -H "X-Auth-Token:*****" http://10.1.34.2:35357/v2.0/tenants?name=lynx-dev2
+#http://docs.openstack.org/api/openstack-identity-service/2.0/content/GET_getTenantByName_v2.0_tenants_Tenant_Operations.html
+
+ - name: Remove the jump-host config files from any delegates
+   file: state=absent
+         dest="{{dest_ssh_home}}/config.d/{{tenant_name}}_jump"
+   delegate_to: "{{item.name}}"
+   with_items: delegate_hosts | default([])
+
+ - name: Re-assemble the delegates config file 
+   assemble: src="{{dest_ssh_home}}/config.d"
+             dest="{{dest_ssh_home}}/config"
+   delegate_to: "{{item.name}}"
+   when: item.name != 'localhost'
+   with_items: delegate_hosts | default([])
+
+
+
+#TODO add raxspace option rax_delete_vms.yml
+
+# Users are created per cloud not per tenant, so can't safely delete users
+#TODO manage users by reversing this safely
+# - name: Create the user for tenant
+#   keystone_user: endpoint={{ os_service_endpoint }} token={{keystone_admin_token}}
+#                  user={{ item.name }} tenant={{ tenant.name }}
+#                  password={{ item.password }} 
+#   with_items: tenant_users | default([])
+
+
+# TODO this would be preferred, but subnet is not being found
+# https://github.com/ansible/ansible/issues/6922#issuecomment-41122399
+ - name: Remove the private network interface from the router
+   quantum_router_interface: state=absent
+                             auth_url="{{ os_auth_url }}"
+                             login_username="{{ admin_tenant_user }}"
+                             login_password="{{ admin_pass }}"
+                             login_tenant_name="{{ admin_tenant }}"
+                             tenant_name="{{ tenant.name }}"
+                             router_name="{{ tenant.router.name }}"
+                             subnet_name="{{ tenant.subnet.name }}"
+   when: use_commandline is not defined
+
+# This is more secure and preferred (using correct tenant user not global admin)
+# but produces a strange error
+# failed: [node-8] => {"failed": true, "item": ""}
+# msg: Error in removing interface from router: global name '_' is not defined
+ # - name: Remove the private network interface from the router
+ #   quantum_router_interface: state=absent
+ #                             auth_url="{{ os_auth_url }}"
+ #                             login_username="{{ tenant_name }}_admin"
+ #                             login_password="{{ tenant.name }}"
+ #                             login_tenant_name="{{ tenant.name }}"
+ #                             tenant_name="{{ tenant.name }}"
+ #                             router_name="{{ tenant.router.name }}"
+ #                             subnet_name="{{ tenant.subnet.name }}"
+ #   #when: use_commandline is not defined
+
+ - name: Remove the gateway from the router
+   quantum_router_gateway: state=absent
+                           auth_url="{{ os_auth_url }}"
+                           login_username={{ admin_tenant_user }}
+                           login_password={{ admin_pass }} 
+                           login_tenant_name={{ admin_tenant }}
+                           router_name={{ tenant.router.name }}
+                           network_name={{ external_router.name }}
+   #when: use_commandline is not defined
+
+ - name: Register the id of the router for the tenant via commandline
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              router-list | grep "{{tenant.router.name}}" | cut -d" " -f2
+   register: register_router
+   #when: use_commandline is defined
+
+ - name: Remove the network gateway from the router via commandline
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              router-gateway-clear "{{tenant.router.name}}" "{{tenant.subnet.name}}"
+   when: 'use_commandline is defined and (register_router.stdout != "" )'
+
+ - name: Register if the subnet exists for the tenant via commandline
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              subnet-list | grep "{{tenant.subnet.name}}" | cut -d" " -f2
+   register: register_subnet
+   when: use_commandline is defined
+
+ - debug: msg="{{register_router}}"
+
+# The gateway port is connected to both the router and the subnet and must be disconnected
+# from both before it can be deleted
+ - name: Remove the private network interface to the router via commandline
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              router-interface-delete "{{register_router.stdout}}" "{{register_subnet.stdout}}"
+   when: "use_commandline is defined and (register_router.stdout != '' )"
+
+ - name: Get the id of the gateway port
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+                  port-list | grep "{{subnet_base}}.1" | cut -d" " -f2
+   register: register_gateway_port_id
+   when: use_commandline is defined
+
+ - name: Delete the gateway port 
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+                  port-delete "{{register_gateway_port_id.stdout}}"
+   when: "use_commandline is defined and (register_gateway_port_id.stdout != '' )"
+
+ - name: Delete the router for the tenant
+   quantum_router: state=absent 
+                    auth_url = "{{ os_auth_url }}"
+                    endpoint={{ os_service_endpoint }} token={{keystone_admin_token}}
+                    tenant_name={{ tenant.name }} name={{ tenant.router.name }}
+                    # login_username={{ admin_tenant_user }} 
+                    # login_password={{ admin_pass }}
+                    # login_tenant_name={{ admin_tenant }}
+   when: use_commandline is not defined
+
+ - name: Delete the router for the tenant via commandline
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              router-delete "{{tenant.router.name}}" 
+   when: "use_commandline is defined and register_router.stdout != ''"
+
+
+ - name: Delete the subnet for the tenant
+   quantum_subnet: state=absent 
+                    endpoint={{ os_service_endpoint }} token={{keystone_admin_token}}
+                    tenant_name={{ tenant.name }} name={{ tenant.subnet.name }}
+                    # login_username={{ admin_tenant_user }} 
+                    # login_password={{ admin_pass }}
+                      # login_tenant_name={{ admin_tenant }}
+   when: use_commandline is not defined
+
+ - debug: msg="{{register_subnet}}"
+
+ - name: Delete the subnet for the tenant via commandline
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+               --os-tenant-name="{{ admin_tenant }}"
+               --os-auth-url="{{ os_auth_url }}"
+               --os-password="{{ admin_pass }}"
+            subnet-delete "{{tenant.subnet.name}}"
+   when: "use_commandline is defined and (register_subnet.stdout != '' )"
+
+ - name: Delete the network for the tenant
+   quantum_network: state=absent 
+                    endpoint={{ os_service_endpoint }}
+                    token={{keystone_admin_token}}
+                    tenant_name={{ tenant.name }}
+                    name={{ tenant.network.name }}
+                    # login_username={{ admin_tenant_user }} 
+                    # login_password={{ admin_pass }}
+                    # login_tenant_name={{ admin_tenant }}
+   when: use_commandline is not defined
+
+
+ - name: Register if the private network exists for the tenant via commandline
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+                  --os-tenant-name="{{ admin_tenant }}"
+                  --os-auth-url="{{ os_auth_url }}"
+                  --os-password="{{ admin_pass }}"
+              net-list | grep "{{tenant.network.name}}" | cut -d" " -f2
+   register: register_network
+   when: use_commandline is defined
+
+ - name: Delete the private network for the tenant via commandline
+   shell: quantum --os-username="{{ admin_tenant_user }}" 
+               --os-tenant-name="{{ admin_tenant }}"
+               --os-auth-url="{{ os_auth_url }}"
+               --os-password="{{ admin_pass }}"
+               net-delete "{{tenant.network.name}}"
+   when: "use_commandline is defined and (register_network.stdout != '' )"
+
+ - name: Delete the nova keypair
+   nova_keypair: state=absent 
+                 login_username="{{ admin_tenant_user }}"
+                 login_password="{{ admin_pass }}"
+                 login_tenant_name="{{ admin_tenant }}"
+                 auth_url="{{os_auth_url}}"
+                 name="{{tenant_name}}_key"
+
+#TODO this does not quite work yet.  An attempt to support it
+# in Koert's CloudVPS branch of keystone_user has been made but
+# it is not quite there yet.  It's possible we may want to always
+# run this as a pretty manual separate step.
+ - name: Remove the tenant's default admin user
+   keystone_user: login_username={{ admin_tenant_user }} 
+                  login_password={{ admin_pass }}
+                  login_tenant_name={{ admin_tenant }} 
+                  endpoint={{ os_auth_url }}
+                  user="{{ tenant_name}}_admin" 
+                  state=absent
+
+
+ - name: Delete the tenant
+   keystone_user: state=absent
+                  login_username="{{ admin_tenant_user }}"
+                  login_password="{{ admin_pass }}"
+                  login_tenant_name="{{ admin_tenant }}"
+                  auth_url="{{os_auth_url}}"
+                  tenant="{{ tenant.name }}"
+  
+
+ - name: Delete the tenant via commandline
+   shell: keystone --os-token {{ keystone_admin_token }} 
+                   --os-endpoint "{{os_service_endpoint}}"
+                   tenant-delete "{{ tenant.name }}" 
+   when: use_commandline is defined 
+
+ - name: debugenv
+   debug: msg="{{hostvars['localhost']}}"
+
+
+ - name: Template the tenant_delete_message
+   local_action: template src=tenant_delete_message
+                 dest="{{hostvars['localhost']['ansible_env']['ANSIBLE_21CT_HOME']}}/roles/openstack/files/completed/tenant_delete_message"
+
+ - name: Notify users of the removal of tenant
+   local_action: 
+          module: mail 
+          body: "{{lookup('file', ANSIBLE_21CT_HOME + '/roles/openstack/files/completed/tenant_delete_message' )}}"
+          from: kbroughton@21ct.com
+          to: "{{item.email}}"
+          host: "{{mail_server}}"
+          attach: "{{ANSIBLE_21CT_HOME}}/{{deploy_vars_relpath}}/{{tenant_name}}/jump_host_ssh_config"
+          port: 25
+          subject: "21ct Datacenter Openstack New Account Notification"
+   no_log: password
+   with_items: tenant_users
+
+
+#TODO test for network name in nova network-list for tenant
+   # - name: Create a subnet for the network
+   #   quantum_subnet: state=present login_username={{ admin_tenant_user }} login_password={{ admin_pass }}
+   #                   login_tenant_name={{ admin_tenant }} tenant_name={{ tenant_name }}
+   #                   network_name={{ tenant.network.name }} name={{ tenant.subnet.name }} cidr={{ tenant.subnet.cidr }}
+
+
+
+
+#TODO the above will fail for adding lynx-dev when lynx-dev2 exists.
+# should use json and do an exact name match.
+
+   # - name: Register if the private network (subnet) exists on the router
+   #   shell: quantum --os-username="{{ admin_tenant_user }}" 
+   #                  --os-tenant-name="{{ admin_tenant }}"
+   #                  --os-auth-url="{{ os_auth_url }}"
+   #                  --os-password="{{ admin_pass }}"
+   #              router-port-list "{{tenant.router.name}}" 
+   #                      --column fixed_ips --column id --format json
+   #   register: register_router_subnets
+
+
+
+   # - name: Clear the router gateway to allow idempotency (no list command exists)
+   #   shell: quantum --os-username="{{ admin_tenant_user }}" 
+   #                  --os-tenant-name="{{ admin_tenant }}"
+   #                  --os-auth-url="{{ os_auth_url }}"
+   #                  --os-password="{{ admin_pass }}"
+   #              router-gateway-clear "{{tenant.router.name}}" 
+
+   # - name: Set the router gateway
+   #   shell: quantum --os-username="{{ admin_tenant_user }}" 
+   #                  --os-tenant-name="{{ admin_tenant }}"
+   #                  --os-auth-url="{{ os_auth_url }}"
+   #                  --os-password="{{ admin_pass }}"
+   #              router-gateway-set "{{tenant.router.name}}" "{{external_network}}"
+
+
+
+
+ # - name: Delete Tenant via commandline
+ #   shell: keystone --os-token {{ keystone_admin_token }} 
+ #                   --os-endpoint "{{os_service_endpoint}}"
+ #                   tenant-delete --name="{{ tenant.name }}" 
+ #                                 --description="{{tenant_description}}"
+ #   when: register_tenant.stdout.find('error') != -1
+
+   # keystone_user: endpoint={{ os_service_endpoint }} token={{keystone_admin_token}}
+   #                user={{ tenant_name }}_admin tenant={{ tenant.name }}
+   #                state=absent

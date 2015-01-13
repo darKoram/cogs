@@ -1,0 +1,87 @@
+# openstack/playbooks/create_vms_play.yml
+
+ # - hosts: all
+ #   gather_facts: yes
+ #   tasks:
+ #     - debug: msg="{{hostvars[inventory_hostname]['ANSIBLE_21CT_HOME']}}"
+
+ #     - debug: msg="{{hostvars[inventory_hostname]['ANSIBLE_21CT_HOME']}}"
+ #     - debug: msg="{{hostvars[inventory_hostname].keys()}}"
+
+ - hosts: localhost
+   tasks:    
+     - include: ../tasks/gen_tenant_keys_locally.yml
+       when: delete_vms is not defined
+
+ - hosts: openstack_controller_leader
+   gather_facts: True
+   vars:
+     usage: >
+        [21ct-ansible] $ ansible-playbook -i hosts roles/openstack/playbooks/create_vms_play.yml 
+                            -e "os_api=rax"
+        @method one of rax or nova.  Two ansible options for managing openstack vms.
+        Run this against a single openstack controller 
+        (or localhost if we do not need any shell commands)
+        eg. hosts file to create lynx-dev2 vms
+
+        [datacenter:children]
+        staging
+        [staging:children]
+        lynx-dev2
+        [lynx-dev2]
+        node-8
+   vars_files:
+     - ../vars/main.yml
+     - "../../../files/requested_hosts/{{requested_hosts_file}}"
+   tasks:
+    - debug: msg="{{usage | pprint }} os_api = {{os_api}}"
+
+    - fail: msg=>
+               RUNNING tenant_play.yml against an openstack is not yet supported.  
+               Set openstack_controller_leader to localhost in <tenant_name>_tenant_hosts file
+      when: inventory_hostname != 'localhost'
+
+# Manky hack to work around non-uniform dns namervers between bp3 and datacenter
+    - name: Set endpoints when calls to horizon are initiated inside datacenter
+      set_fact: 
+        os_service_endpoint: "{{os_service_endpoint_address}}"
+        os_auth_url: "{{os_auth_url_address}}"
+      when: inventory_hostname != 'localhost'
+
+    - name: Set endpoints when calls to horizon are initiated outside datacenter
+      set_fact: 
+        os_service_endpoint: "{{os_service_endpoint_name}}"
+        os_auth_url: "{{os_auth_url_name}}"
+      when: inventory_hostname == 'localhost'
+
+    - debug: msg="{{hostvars[inventory_hostname]['requested_hosts_file']}}"
+    - debug: msg="{{hostvars[inventory_hostname]['tenant_security_profile']}}"
+
+    - include: ../tasks/nova_create_vms.yml
+      when: delete_vms is not defined and ( os_api == 'nova' )
+
+    - include: ../tasks/rax_create_vms.yml
+      when: delete_vms is not defined and ( os_api == 'rax' )
+
+    - debug: msg=>
+               You must now wait 1 min for the floating ips to be
+               assigned before you can run the role provisioning playbooks
+               ansible-playbook -i hosts site.yml
+      when: delete_vms is not defined
+
+    - include: ../tasks/nova_delete_vms.yml
+      when: delete_vms is defined and ( delete_vms == 'yes' )
+
+ - hosts: localhost
+   tasks:   
+    - name: Deleting keypair will require new keys for all tenant users
+      debug: msg="use -e 'delete_keys=yes' to force deleting keys for a tenant"
+
+    - name: Delete the identities directory for ssh 
+      file: dest="{{src_ssh_home}}/identities/{{item}}" mode=0700 state=absent
+      with_items:
+        - "{{tenant_name}}_key.pub"
+        - "{{tenant_name}}_key"
+      when: delete_keys is defined and ( delete_keys == 'yes' )
+   
+#TODO should message users that key has been deleted.  Give steps to clean known_hosts.

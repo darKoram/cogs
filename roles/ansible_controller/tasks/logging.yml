@@ -1,0 +1,14 @@
+# ansible_controller/tasks/monitoring.yml
+
+# Presumably we will want to log all ansible_controller
+# activity in a nice searchable way with log-rotating
+# etc.  The logging.yml task sets up local logging or
+# hooks into a remote logging service.
+
+- name: Create key and cert pair for logstash forwarder
+  shell: >
+    creates="{{logstash_ssl_dir}}/{{logstash_ssl_certificate_file}}"
+    openssl req -x509 -batch -nodes -days 3650 -newkey rsa:2048 
+            -keyout "{{logstash_ssl_dir}}/{{logstash_ssl_key_file}}" 
+            -out "{{logstash_ssl_dir}}/{{logstash_ssl_certificate_file}}"
+

@@ -1,0 +1,214 @@
+---
+
+# openstack/tasks/nova_create_vms.yml
+
+#login_tenant_name={{tenant.name}}
+#                 login_tenant_id=401a0896417a47988b5663a560cd2cc5
+
+ - debug: msg="{{src_ssh_home+'/identities/'+tenant_name+'_key.pub'}}"
+ - debug: msg="{{src_ssh_home}}"
+ - debug: msg="{{lookup('file',src_ssh_home + '/identities/' + tenant_name + '_key.pub')}}"
+
+ - nova_keypair: state=present 
+                 login_username="{{tenant_name}}_admin"
+                 login_password="{{tenant.name}}"
+                 login_tenant_name="{{tenant.name}}"
+                 auth_url="{{os_auth_url}}"
+                 name="{{tenant_name}}_key"
+                 public_key="{{ lookup('file',src_ssh_home + '/identities/' + tenant_name + '_key.pub') }}"
+   register: register_nova_keypair
+
+ - debug: msg="{{register_nova_keypair}}"
+
+ - name: Create the block storage volumes
+   cinder_volume: state=present
+                  login_username="{{tenant_name}}_admin"
+                  login_password="{{tenant.name}}"
+                  login_tenant_name="{{tenant.name}}"
+                  auth_url="{{os_auth_url}}"
+                  name="{{item[1].name}}"
+                  size="{{item[1].size}}"
+   with_subelements:
+     - requested_hosts
+     - attached_volumes
+
+
+ - name: Create the vms
+   nova_compute: 
+       login_username: "{{tenant_name}}_admin"
+       login_password: "{{tenant.name}}"
+       login_tenant_name: "{{tenant.name}}"
+       auth_url: "{{os_auth_url}}"
+       key_name: "{{tenant_name}}_key"
+       name: "{{item.hostname}}"
+       image_id: "{{item.image_id}}"
+       state: present
+       #meta: 
+       #  groups: [{% for grp in deployment_groups|list + item.roles|list %}]
+       flavor_id: "{{item.flavor_id}}"
+       volumes: "{{item.attached_volumes}}"
+       #nics: None
+       wait_for: 180
+       security_groups: "{{item.security_groups}}"
+       wait: "yes"
+   with_items: requested_hosts
+   register: register_vms
+
+# This is for cloud container files
+ # - name: Push critical files to vms
+ #   rax_files: 
+# - wait_for: timeout=20
+
+
+#TODO is this doing anything?
+#   add_host: name="{{item.hostname}}" groups="{{tenant_name}}"
+
+ - name: Add the new hosts to inventory
+   add_host: name="{{item.hostname}}"  groups="{% for gp in deployment_groups|list %}{{gp}},{% endfor %}{{item.roles}}"
+   with_items: requested_hosts
+
+ - name: Template the new etc_hosts to localhost 
+   local_action: template src=etc_hosts 
+                 dest="{{hostvars['localhost']['ansible_env']['ANSIBLE_21CT_HOME']}}/{{deploy_vars_relpath}}/{{tenant_name}}/etc_hosts"
+#                 dest="{{ansible_env['ANSIBLE_21CT_HOME']}}/{{deploy_vars_relpath}}/{{tenant_name}}/etc_hosts"
+
+ - name: Template the ssh_config jump host snippet to localhost
+   local_action: template src=jump_host_ssh_config 
+                 dest="{{hostvars['localhost']['ansible_env']['ANSIBLE_21CT_HOME']}}/{{deploy_vars_relpath}}/{{tenant_name}}/jump_host_ssh_config"
+
+ - name: Associate any pre-assigned floating ips
+   quantum_floating_ip_associate: 
+        state=present
+        login_username="{{tenant_name}}_admin"
+        login_password="{{tenant.name}}"
+        login_tenant_name="{{tenant.name}}"
+        auth_url="{{os_auth_url}}"
+        ip_address="{{item.floating_ip}}"
+        instance_name="{{item.hostname}}"
+   when: (item.floating_ip != '') and (item.floating_ip != 'yes')
+   with_items: requested_hosts
+
+
+ - name: Add floating ips from free pool
+   quantum_floating_ip: 
+        state=present
+        login_username="{{tenant_name}}_admin"
+        login_password="{{tenant.name}}"
+        login_tenant_name="{{tenant.name}}"
+        auth_url="{{os_auth_url}}"
+        instance_name="{{item.hostname}}"
+        internal_network_name="{{tenant.network.name}}"
+        network_name="{{external_network}}"
+   when: item.floating_ip == 'yes'
+   with_items: requested_hosts
+
+
+# nova_create module returns with all the needed info. Just register it.
+ - name: Get facts about created servers
+   rax_facts:
+     auth_endpoint: "{{os_service_endpoint}}"
+     identity_type: "{{os_auth_strategy}}"
+     #tenant_name: "{{tenant.name}}"
+     tenant_id: "{{tenant.id}}"
+     username: "{{tenant_name}}_admin"
+     api_key: "{{tenant.name}}"
+     name: "{{item.hostname}}"
+     verify_ssl: no
+     region: "{{openstack.region}}"
+   with_items: requested_hosts
+   register: register_rax_facts
+#     username: "{{admin_tenant_user}}"
+#     api_key: "{{admin_pass}}"
+
+#region: "{{openstack.region}}"
+
+ - debug: msg="{{register_rax_facts.results[0].ansible_facts.rax_addresses[tenant.network.name][0].addr  }}"
+
+ # - name: Get facts about created servers
+ #   rax_facts:
+ #     auth_endpoint: "{{os_service_endpoint}}"
+ #     api_key: "{{keystone_admin_token}}"
+ #     identity_type: "{{os_auth_strategy}}"
+ #     tenant_name: "{{tenant.name}}"
+ #     username: "{{admin_tenant_user}}"
+ #     name: "{{item.hostname}}"
+ #   with_items: requested_hosts
+
+ # - name: Map some facts
+ #   set_fact:
+ #     mapped_interface_1: "{{ rax_accessipv4 }}"
+ #   when: "{{inventory_hostname in groups[tenant_name]}}"
+
+ - debug: msg="{{register_vms}}"
+
+ - name: Template the admin_vm_keys_body message
+   local_action: template src=admin_vm_keys_body
+                 dest="{{ANSIBLE_21CT_HOME}}/roles/openstack/files/completed/admin_vm_keys_body"
+
+ - name: Mail the administrators their vm keys
+   local_action: 
+         module: mail 
+         body: "{{lookup('file',ANSIBLE_21CT_HOME + '/roles/openstack/files/completed/admin_vm_keys_body')}}"
+         from: "{{lookup('env','USER')}}@21ct.com"
+         to: "{{item.email}}"
+         attach: "{{src_ssh_home}}/identities/{{tenant_name}}_key.pub {{src_ssh_home}}/identities/{{tenant_name}}_key {{ANSIBLE_21CT_HOME}}/{{deploy_vars_relpath}}/{{tenant_name}}/jump_host_ssh_config {{ANSIBLE_21CT_HOME}}/{{deploy_vars_relpath}}/{{tenant_name}}/etc_hosts"
+         host: "{{mail_server}}"
+         port: 25
+         subject: "New account credentials for vms in {{tenant_name}}"
+   with_items:
+     - "{{tenant_users}}"
+   when: mail_users is defined
+
+ # - name: Get tenant id
+ #   uri: url="{{ os_service_endpoint }}/tenants?name={{tenant.name}}"
+ #        method=GET
+ #        timeout=30
+ #        return_content=yes
+ #        HEADER_User-Agent=python-keystoneclient
+ #        HEADER_X-Auth-Token="{{keystone_admin_token}}"
+ #        HEADER_Content-Type="application/json"
+ #   register: register_tenant
+
+# Belongs in an openstack_controller init role
+
+ # - name: Create openstack_controller directories
+ #   file: dest="{{item}}" state=directory
+ #   with_items: openstack_controller_paths
+
+ # - name: Template nova.ini to controller
+ #   template: src=nova.ini dest=/etc/ansible/nova.ini
+
+ # - name: Copy nova.py to controller
+ #   copy: src=nova.py dest=/etc/ansible/nova.py mode=0755
+
+ # - name: Run the inventory script
+ #   shell: /etc/ansible/nova.py --list
+ #   register: register_nova
+
+ # - debug: msg="{{register_nova.stdout}}"
+
+# The url os-fixed-ips is from the official openstack docs but does not work 
+ # - name: Get the ips of the new vms
+ #   uri: url="{{os_service_endpoint}}/{{register_tenant.json.tenant.id}}/os-floating-ips"
+ #        HEADER_User-Agent=python-keystoneclient
+ #        HEADER_X-Auth-Token="{{keystone_admin_token}}"
+ #        HEADER_Content-Type="application/json"
+ #        timeout=30
+ #        method=GET
+ #        status_code=200
+ #        return_content=yes
+ #   register: register_floating_ips
+
+ # - debug: msg="{{register_floating_ips}}"
+
+ # - name: Get the ips of the new vms
+ #   uri: body=nodefault
+ #        url="{{os_service_endpoint}}/v2/{{register_tenant.json.tenant.id}}/os-fixed-ips"
+ #        method=GET
+ #        status_code=200
+ #        return_content=yes
+ #   register: register_fixed_ips
+
+ # - debug: msg="{{register_fixed_ips}}"
+
+

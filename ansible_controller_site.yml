@@ -1,0 +1,33 @@
+
+- hosts: all
+  gather_facts: yes
+  tasks: 
+    - group_by: key={{ansible_os_family}}
+
+- hosts: ansible_controller
+  roles: 
+    - ansible_controller
+    - { role: ../librarian_roles/gcporras.virtualenvwrapper }
+# Enable elk logging on controller to monitor deployment specific logs
+  tags:
+    - ansible_controller
+
+- hosts: logging
+  sudo: yes
+  roles:
+    - { role: ../librarian_roles/gpstathis.elasticsearch }
+    - { role: ../librarian_roles/geerlingguy.elasticsearch-curator }
+    - { role: ../librarian_roles/geerlingguy.nginx }
+    - { role: ../librarian_roles/geerlingguy.logstash }
+    - { role: ../librarian_roles/geerlingguy.kibana }
+  tags:
+    - logging
+
+- hosts: jenkins
+  sudo: yes
+  gather_facts: "{{jenkins_facts | default(False)}}"
+  roles:
+    - { role: ../librarian_roles/geerlingguy.jenkins }
+  tags:
+    - jenkins 
+    

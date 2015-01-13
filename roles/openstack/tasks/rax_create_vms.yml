@@ -1,0 +1,108 @@
+---
+
+# roles/openstack/tasks/create_vms.yml
+
+ # - name: .
+ #   rax_clb: username=nodefault
+ #            virtualenv=nodefault
+ #            weight=nodefault
+ #            region=nodefault
+ #            load_balancer_id=nodefault
+ #            state=present
+ #            wait_timeout=30
+ #            condition=nodefault
+ #            address=nodefault
+ #            credentials=nodefault
+ #            api_key=nodefault
+ #            type=nodefault
+ #            port=nodefault
+ #            node_id=nodefault
+ #            wait=no
+
+#TODO servers created with rax do not show up with a cs.servers.list
+# but do if created with cs.servers.create
+#cs = pyrax.cloudservers
+#print cs.servers.list()
+
+ - debug: msg="{{groups}} {{requested_hosts}}"
+
+ - name: Template .pyrax.cfg to controller
+   template: src="{{ANSIBLE_21CT_HOME}}/roles/ansible_controller/templates/.pyrax.cfg"
+             dest="~/.pyrax.cfg"
+
+ - name: Template .prax.creds to controller
+   template: src=".pyrax.creds" dest="~/.pyrax.creds.{{tenant_name}}"
+
+ - name: Template bootstrap networking files
+   local_action: template src="{{item.src}}" 
+                 dest="{{item.dest}}"
+   with_items:
+     - 'src': "{{ANSIBLE_21CT_HOME}}/roles/openstack/templates/resolv.conf"
+       'dest': "{{ANSIBLE_21CT_HOME}}/roles/openstack/files/completed/resolv.conf"
+     - 'src': "{{ANSIBLE_DEV_HOME}}/roles/centos_common/templates/etc_sysconfig_network"
+       'dest': "{{ANSIBLE_21CT_HOME}}/roles/openstack/files/completed/etc_sysconfig_network"
+
+ - name: Server build request
+   local_action:
+     module: rax
+     identity_type: keystone
+     tenant_id: "{{tenant.id}}"
+     username: "{{tenant_name}}_admin"
+     api_key: "{{tenant.name}}"
+     region: "{{openstack.region}}"
+     auth_endpoint: "{{os_service_endpoint}}"
+     verify_ssl: no
+     #    credentials: ~/.pyrax.cfg
+     service: cloudservers
+     name: "{{item.hostname}}"
+     flavor: "{{item.flavor_id}}"
+     image: "{{item.image_id}}"
+     files:
+      - "{{dest_ssh_home}}/authorized_keys: {{identity_files_home}}/{{tenant_name}}_key.pub"
+      - "{{identity_files_home}}/{{tenant_name}}_key: {{identity_files_home}}/{{tenant_name}}_key"
+      - "{{identity_files_home}}/{{tenant_name}}_key.pub: {{identity_files_home}}/{{tenant_name}}_key.pub"
+      - "/etc/resolv.conf: {{ANSIBLE_21CT_HOME}}/roles/openstack/files/completed/resolv.conf"
+      - "/etc/sysconfig/network: {{ANSIBLE_21CT_HOME}}/roles/openstack/files/completed/etc_sysconfig_network"
+     wait: yes
+     state: present
+   with_items: requested_hosts
+   register: register_vms
+#TODO fix the "personality content too long" error these files cause
+
+
+# Creds file is on openstack controller
+ - name: Get rax facts about created servers
+   rax_facts:
+     identity_type: keystone
+     #credentials: "{{lookup('file','~/.pyrax.creds.'+tenant_name)}}"
+     #tenant_name: dc-lynx-dev2 
+     tenant_id: "{{tenant.id}}"
+     username: "{{tenant_name}}_admin"
+     api_key: "{{tenant.name}}"
+     #username: "{{tenant_name}}_admin"
+     #api_key: "{{tenant.name}}"
+     name: "{{item.hostname}}"
+     region: "{{openstack.region}}"
+     auth_endpoint: "{{os_service_endpoint}}"
+     verify_ssl: no
+     #env: "{{pyrax_environment}}"
+   with_items: requested_hosts
+   register: register_vms
+   when: register_vms is not defined
+
+#The next two are just a copy, but easier to make use of relative dirs than use a shell
+ # - name: Copy requested_hosts file to completed
+ #   local_action: 
+ #     module: copy 
+ #     src: requested/requested_hosts.yml 
+ #     dest: completed/requested_hosts.yml
+ #     backup: yes
+
+ # - name: Delete original requested/requested_hosts.yml
+ #   local_action: 
+ #     module: file 
+ #     dest: requested/requested_hosts.yml 
+ #     state: absent
+
+ # - name: Template new hosts file
+ #   template: src=openstack_hosts dest="{{requested_hosts['meta']['generated_hosts']}}"

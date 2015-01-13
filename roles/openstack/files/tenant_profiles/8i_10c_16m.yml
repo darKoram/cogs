@@ -1,0 +1,28 @@
+---
+
+# openstack/files/tenant_profiles/10i_70c_232m.yml
+
+tenant_settings:
+ quotas:
+  instances: 8
+  cores: 10    
+  ram: 16384 
+  gigabytes: 120
+  volumes: 12
+  snapshots: 5
+  floating_ips: 8    
+  fixed_ips: 8    
+  metadata_items: 128   
+  injected_files: 5     
+  injected_file_content_bytes: 10240 
+  injected_file_path_bytes: 255   
+  key_pairs: 10   
+  security_groups: 10    
+  security_group_rules: 10
+
+# ram in Megabytes of instance ram allowed per tenant
+
+# small project for minimal + breathing room for torch deployment
+
+# ram: 3 x 64 Gb + 1 x 16 Gb + 6 x 4 Gb = 232 Gb = 237568 Mb
+# cores: 3 x 20 + 1 x 4 + 6 x 1 = 70 

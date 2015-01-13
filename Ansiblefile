@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+#^syntax detection
+
+# Ansiblefile for ansible_controller
+
+site "https://galaxy.ansible.com/api/v1"
+
+role "gcporras.virtualenvwrapper"
+role "gpstathis.elasticsearch"
+role "geerlingguy.elasticsearch-curator"
+role "geerlingguy.logstash"
+role "geerlingguy.nginx"
+role "geerlingguy.kibana"
+# provide maven
+role "https://github.com/silpion/ansible-maven.git"
+role "geerlingguy.jenkins"
+
+# Doesn't use apt.  So many ruby roles, none look great.
+# Simple apt install for now.
+# role "Sirupsen.ruby-common"
+
+#role "pgolm.ansible-playbook-monit",
+#  github: "pgolm/ansible-playbook-monit"
+#
+#role "ansible-role-nagios-nrpe-server",
+#  ">=0.0.0",
+#  path: "./roles/ansible-role-nagios-nrpe-server"
+#
