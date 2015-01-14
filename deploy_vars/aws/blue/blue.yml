@@ -9,8 +9,6 @@
 
 aws_vpc:
   cidr_block: 172.22.0.0/16
-  resource_tags: 
-    Environment: Development
   subnets:       
       - cidr: 172.22.1.0/24
         az: us-west-1c

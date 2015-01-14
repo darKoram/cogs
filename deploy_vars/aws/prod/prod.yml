@@ -1,0 +1,7 @@
+# prod.yml
+
+dummy: var
+
+aws_vpc:
+  resource_tags: 
+    Environment: prod
