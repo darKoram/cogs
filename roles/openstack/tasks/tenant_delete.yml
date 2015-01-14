@@ -86,7 +86,7 @@
 # If no ips exist neither does stdout_lines 
 
 
-#curl -H "X-Auth-Token:*****" http://10.1.34.2:35357/v2.0/tenants?name=box-dev2
+#curl -H "X-Auth-Token:*****" http://10.x.y.z:35357/v2.0/tenants?name=box-dev2
 #http://docs.openstack.org/api/openstack-identity-service/2.0/content/GET_getTenantByName_v2.0_tenants_Tenant_Operations.html
 
  - name: Remove the jump-host config files from any delegates
