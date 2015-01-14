@@ -22,13 +22,13 @@
         @method one of rax or nova.  Two ansible options for managing openstack vms.
         Run this against a single openstack controller 
         (or localhost if we do not need any shell commands)
-        eg. hosts file to create lynx-dev2 vms
+        eg. hosts file to create box-dev2 vms
 
         [datacenter:children]
         staging
         [staging:children]
-        lynx-dev2
-        [lynx-dev2]
+        box-dev2
+        [box-dev2]
         node-8
    vars_files:
      - ../vars/main.yml

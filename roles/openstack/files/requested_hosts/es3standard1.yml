@@ -11,8 +11,8 @@ log_mount: vdb
 data_mount: vdc
 
 requested_hosts:
- - short_hostname: lynx01
-   hostname: "{{tenant.name}}-lynx01"
+ - short_hostname: box01
+   hostname: "{{tenant.name}}-box01"
    roles: torch
    flavor_id: "{{torch_flavor.id}}"
    floating_ip: "yes"
@@ -21,10 +21,10 @@ requested_hosts:
    security_groups: default
    attached_volumes: 
      - device_name: "{{log_mount}}"
-       name: "lynx01_{{log_mount}}"
+       name: "box01_{{log_mount}}"
        size: 20
      - device_name: "{{data_mount}}"
-       name: "lynx01_{{data_mount}}"
+       name: "box01_{{data_mount}}"
        size: 100 
  # - short_hostname: elastic01
  #   hostname: "{{tenant.name}}-elastic01"
@@ -82,7 +82,7 @@ requested_hosts:
    attached_volumes: []
  # - short_hostname: ansible
  #   hostname: "{{tenant.name}}-ansible"
- #   roles: ansible_controller,lynx3_data_source
+ #   roles: ansible_controller,box3_data_source
  #   flavor_id: "{{ansible_flavor.id}}"
  #   floating_ip: "yes"
  #   image_id: "{{ansible_image.id}}"

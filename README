@@ -1,5 +1,10 @@
 README
 
+This repo combines an ansible project tree with three roles
+and librarian-ansible with six ansible-galaxy roles.  This is
+for demonstration purposes.  
+
+Ansible galaxy follows a one-git-repo-per-role strategy.  
 One git repo per role allows users to pick and choose 
 just what they need rather than requiring them to 
 download 40+ roles when they only want 4.

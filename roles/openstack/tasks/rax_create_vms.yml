@@ -75,7 +75,7 @@
    rax_facts:
      identity_type: keystone
      #credentials: "{{lookup('file','~/.pyrax.creds.'+tenant_name)}}"
-     #tenant_name: dc-lynx-dev2 
+     #tenant_name: dc-box-dev2 
      tenant_id: "{{tenant.id}}"
      username: "{{tenant_name}}_admin"
      api_key: "{{tenant.name}}"

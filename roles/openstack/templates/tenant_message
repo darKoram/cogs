@@ -58,7 +58,7 @@ When finished, commit and push the changes to stash.
 Add the etc_hosts snippet to your /etc/hosts
 
 The following pulbic ips are available.
-To avoid conflicts with private ip mappings of lynx01 etc in .ssh/config
+To avoid conflicts with private ip mappings of box01 etc in .ssh/config
 we use the full name torch01 etc for public ips.
 # Eventually this will be replaced with a single haproxy called torch
 

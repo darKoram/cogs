@@ -1,5 +1,8 @@
 # aws/creds.yml
 
+# This file and the files it points to could be 
+# ansible-vaulted for more security
+
 aws_ssl_dir: "{{keys_and_certs_home}}/aws"
 aws_ssl_certificate_file: "aws-cli.crt"
 aws_ssl_key_file: "aws-cli.key"

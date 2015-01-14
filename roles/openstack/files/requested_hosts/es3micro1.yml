@@ -31,8 +31,8 @@ elasticsearch_flavor:
   id: 1bc0c9c8-e3a8-4ae1-9e0f-d0d251a1e5eb
 
 requested_hosts:
- - short_hostname: lynx01
-   hostname: "{{tenant.name}}-lynx01"
+ - short_hostname: box01
+   hostname: "{{tenant.name}}-box01"
    roles: torch
    flavor_id: "{{torch_flavor.id}}"
    floating_ip: "{{torch_floating_ip}}"
@@ -42,11 +42,11 @@ requested_hosts:
    attached_volumes: 
      - mount_point: "{{log_mount_point}}"
        device_name: "{{log_mount_device}}"
-       name: "lynx01_{{log_mount_device}}"
+       name: "box01_{{log_mount_device}}"
        size: 2
      - mount_point: "{{data_mount_point}}"
        device_name: "{{data_mount_device}}"
-       name: "lynx01_{{data_mount_device}}"
+       name: "box01_{{data_mount_device}}"
        size: 4
  - short_hostname: elastic01
    hostname: "{{tenant.name}}-elastic01"
@@ -110,7 +110,7 @@ requested_hosts:
    attached_volumes: []
  # - short_hostname: ansible
  #   hostname: "{{tenant.name}}-ansible"
- #   roles: ansible_controller,lynx3_data_source
+ #   roles: ansible_controller,box3_data_source
  #   flavor_id: "{{ansible_flavor.id}}"
  #   floating_ip: "yes"
  #   image_id: "{{ansible_image.id}}"

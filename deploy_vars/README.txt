@@ -5,7 +5,7 @@ while group_vars matches an inventory hosts file
 ( or hostvars[groups] from dynamic inventory)
 with folders that are direct children of group_vars/ and all
 desendent folders of matches are loaded; deploy_vars
-uses the deploy_vars.py plugin in vars_plugins/ and 
+uses the deploy_vars.py plugin which I wrote in vars_plugins/ and 
 checks at each sub-folder that the folder-name matches 
 a hostvars[groups] and only descends on a match.
 

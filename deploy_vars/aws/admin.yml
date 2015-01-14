@@ -1,4 +1,8 @@
 
+# deploy_vars/aws/admin.yml
+
+# This file should be vaulted to secure users and grouped_users
+
 grouped_users:
   group:
     name: admin

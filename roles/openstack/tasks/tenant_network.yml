@@ -151,7 +151,7 @@
                 --tenant-id "{{tenant_id}}"
    when: "register_routers.stdout.find( '{{tenant.router.name}}' ) == -1"
 
-# TODO the above will fail for adding lynx-dev when lynx-dev2 exists.
+# TODO the above will fail for adding box-dev when box-dev2 exists.
 # should use json and do an exact name match.
 
 # TODO The ansible module is now working and preferred

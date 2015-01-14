@@ -30,7 +30,7 @@
  #   register: register_tenants
 
  # - name: See if tenant exists
- #   uri: body="name=lynx-dev2"
+ #   uri: body="name=box-dev2"
  #        url="{{ os_service_endpoint }}/tenants"
  #        method=POST
  #        timeout=30
