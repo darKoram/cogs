@@ -3,6 +3,11 @@
 # This file and the files it points to could be 
 # ansible-vaulted for more security
 
+# Until ansible vault has multi-key support
+# this file should be vaulted and the password/key
+# distributed to all those who need vm management
+# permissions.
+
 aws_ssl_dir: "{{keys_and_certs_home}}/aws"
 aws_ssl_certificate_file: "aws-cli.crt"
 aws_ssl_key_file: "aws-cli.key"

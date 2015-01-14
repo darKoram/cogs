@@ -1,19 +1,28 @@
 # aws_manage/tasks/route53.yml
 
 # Add new.foo.com as an A record with 3 IPs
+# Test using new (Nov 2014) private dns hosted zone
+# hosted private domains must be created first via GUI
+# route53 > hosted zones > create zone > private zone
+# record the vpc-id as aws_vpc_id
+
 - route53:
+      aws_access_key: "{{aws_access_key}}"
+      aws_secret_key: "{{aws_secret_key}}"
       command: create
-      zone: foo.com
-      record: new.foo.com
+      zone: "{{aws_vpc.zone}}"
+      record: platform.aws-prod.org
       type: A
       ttl: 7200
       value: 1.1.1.1,2.2.2.2,3.3.3.3
 
-# Retrieve the details for new.foo.com
+# Retrieve the details for app.aws-prod.com
 - route53:
+      aws_access_key: "{{aws_access_key}}"
+      aws_secret_key: "{{aws_secret_key}}"      
       command: get
-      zone: foo.com
-      record: new.foo.com
+      zone: "{{aws_vpc.zone}}"
+      record: platform.aws-prod.org
       type: A
   register: rec
 
@@ -21,8 +30,10 @@
 
 # Delete new.foo.com A record using the results from the get command
 - route53:
+      aws_access_key: "{{aws_access_key}}"
+      aws_secret_key: "{{aws_secret_key}}"
       command: delete
-      zone: foo.com
+      zone: "{{aws_vpc.zone}}"
       record: "{{ rec.set.record }}"
       type: "{{ rec.set.type }}"
       value: "{{ rec.set.value }}"

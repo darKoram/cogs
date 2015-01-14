@@ -5,7 +5,7 @@
     - group_by: key={{ansible_os_family}}
 
 - hosts: jenkins
-  gather_facts:  "{{ jenkins_facts | default(False)"
+  gather_facts:  "{{ jenkins_facts | default(False) }}"
   roles:
     - geerlingguy.jenkins 
   tags:

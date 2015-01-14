@@ -32,6 +32,8 @@ aws_vpc:
         - dest: 0.0.0.0/0
           gw:  igw
   region: "{{aws_default_region}}"
+  id: "vpc-11478d79"
+  zone: "aws-prod.org"
 
 aws_default_region: "us-west-1"
 aws_output_format: "json"

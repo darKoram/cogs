@@ -3,8 +3,10 @@
   gather_facts: yes
   tasks: 
     - group_by: key={{ansible_os_family}}
+      changed_when: no
 
 - hosts: aws
+  sudo: no
   roles: 
     - aws_manage
   tags:

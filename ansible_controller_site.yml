@@ -3,8 +3,10 @@
   gather_facts: yes
   tasks: 
     - group_by: key={{ansible_os_family}}
+  changed_when: False
 
 - hosts: ansible_controller
+  sudo: no
   roles: 
     - ansible_controller
     - { role: ../librarian_roles/gcporras.virtualenvwrapper }

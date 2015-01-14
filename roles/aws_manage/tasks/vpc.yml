@@ -1,9 +1,12 @@
 # aws_manage/tasks/vpc.yml
 
 # To delete, pass in aws_vpc_state=delete as extra-vars
+- debug: msg="{{aws_access_key}} {{aws_secret_key}}"
 
 - name: Set up a Virtual Private Cloud
   ec2_vpc:
+     aws_access_key: "{{aws_access_key}}"
+     aws_secret_key: "{{aws_secret_key}}"
      state: "{{ aws_vpc_state | default('present')}}"
      cidr_block: "{{aws_vpc.cidr_block}}"
      resource_tags:  "{{aws_vpc.resource_tags | to_json}}"
@@ -11,6 +14,8 @@
      internet_gateway: True
      route_tables: "{{aws_vpc.route_tables | to_json}}"
      region: "{{aws_vpc.region}}"
+     dns_hostnames: yes
+     dns_support: yes
   register: vpc
 
 - debug: msg="{{vpc}}"

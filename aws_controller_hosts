@@ -5,7 +5,14 @@ localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python
 
 [deploy_vars:children]
 aws
-[aws]
+[aws:children]
+blue
+[blue:children]
+admin
+[admin]
+localhost
+
+[prod]
 localhost
 
 [logging]

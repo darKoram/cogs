@@ -1,0 +1,24 @@
+ansible_conventions.yml
+
+filenaming:
+  # Often we refer to a directory, path, file, url in config variables.
+  # Define the conventions
+  options:
+  # { suffix: description }
+    -  { "_file": "os.path.basename of file = fully_qualified_path.split('/')[-1]"}
+    -  { "_path": "fully qualified path starting with '/' ending with file name"}
+    -  { "_home": "must be a directory, usually to a service root"}
+    -  { "_dir": "os.path.isdir() == True, directory for a collection of files"}
+    -  { "_url": "fully qualified url to resource on the web"}
+    -  { "_route": "url excluding the domain name - example.com - portion"}
+  conversion_utils:
+    -  context: "jinja2" 
+         - tool: "{{ fully_qualified_path | basename }}" 
+           input: "fully_qualified_path"
+           output: 
+             - "_file"
+         - tool: "{{ fully_qualified_path | dirname }}"
+           input "fully_qualified_path"
+           output: 
+              - "_home"
+              - "_dir"
