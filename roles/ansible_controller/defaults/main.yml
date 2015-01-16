@@ -5,7 +5,38 @@
 ansible_controller_sublime: no
 sublime_text_version: 3
 
-_ansible_controller_apt_packages: 
+ansible_controller_apt_packages: 
   - rubygems-integration
+  - docker
 
-ansible_grok_git_url:  https://github.com/yetu/ansible-logstash/blob/master/files/ansible.grok
+ansible_controller_pip_packages:
+  - docker-py
+
+ansible_controller_gems:
+  - librarian-ansible
+
+# ansible_controller_node_packages:
+#   -  
+
+
+ansible_grok_git_url: "https://github.com/yetu/ansible-logstash/blob/master/files/ansible.grok"
+
+########################
+# geerlingguy.homebrew vars
+########################
+homebrew_installed_packages:
+  - ssh-copy-id
+  - pv
+  - boot2docker
+  - docker
+
+homebrew_upgrade_all_packages: no
+
+homebrew_taps:
+  - caskroom/cask
+
+homebrew_cask_apps:
+  - virtualbox
+  - vagrant
+  - vagrant-manager
+

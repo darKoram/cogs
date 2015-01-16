@@ -6,10 +6,14 @@
   changed_when: False
 
 - hosts: ansible_controller
+  tasks: ansible_controller/tasks/mac_bootstrap.yml
+  when: ansible_os_family == "Darwin"
+
+- hosts: ansible_controller
   sudo: no
   roles: 
-    - ansible_controller
-    - { role: ../librarian_roles/gcporras.virtualenvwrapper }
+     - ansible_controller
+     - { role: ../librarian_roles/gcporras.virtualenvwrapper }
 # Enable elk logging on controller to monitor deployment specific logs
   tags:
     - ansible_controller

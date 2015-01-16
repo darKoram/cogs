@@ -1,7 +1,7 @@
 # aws_manage/tasks/vpc.yml
 
 # To delete, pass in aws_vpc_state=delete as extra-vars
-- debug: msg="{{aws_access_key}} {{aws_secret_key}}"
+#- debug: msg="{{aws_access_key}} {{aws_secret_key}}"
 
 - name: Set up a Virtual Private Cloud
   ec2_vpc:
