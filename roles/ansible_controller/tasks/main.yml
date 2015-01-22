@@ -10,5 +10,6 @@
 #
 # Could also investigate Ansible Repo Manager
 # https://github.com/mirskytech/ansible-role-manager 
- gem: name=librarian-ansible
+- name: Install ansible_controller gems 
+  gem: name=librarian-ansible
 

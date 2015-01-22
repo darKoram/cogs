@@ -3,28 +3,29 @@
   gather_facts: yes
   tasks: 
     - group_by: key={{ansible_os_family}}
-  changed_when: False
+      changed_when: False
 
-- hosts: ansible_controller
-  tasks: ansible_controller/tasks/mac_bootstrap.yml
-  when: ansible_os_family == "Darwin"
+#- hosts: ansible_controller
+#  tasks: 
+#    - include: ansible_controller/tasks/mac_bootstrap.yml
+#      when: ansible_os_family == "Darwin"
 
 - hosts: ansible_controller
   sudo: no
   roles: 
      - ansible_controller
-     - { role: ../librarian_roles/gcporras.virtualenvwrapper }
+#     - { role: ../librarian_roles/gcporras.virtualenvwrapper }
 # Enable elk logging on controller to monitor deployment specific logs
   tags:
     - ansible_controller
 
-- hosts: logging
-  sudo: yes
-  roles:
-    - { role: ../librarian_roles/gpstathis.elasticsearch }
-    - { role: ../librarian_roles/geerlingguy.elasticsearch-curator }
-    - { role: ../librarian_roles/geerlingguy.nginx }
-    - { role: ../librarian_roles/geerlingguy.logstash }
+#- hosts: logging
+#  sudo: yes
+#  roles:
+#    - { role: ../librarian_roles/gpstathis.elasticsearch }
+#    - { role: ../librarian_roles/geerlingguy.elasticsearch-curator }
+#    - { role: ../librarian_roles/geerlingguy.nginx }
+#    - { role: ../librarian_roles/geerlingguy.logstash }
     - { role: ../librarian_roles/geerlingguy.kibana }
   tags:
     - logging
